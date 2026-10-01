@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "public",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    { "source": "/svg/:data", "destination": "/api/image?fmt=svg&data=:data" },
+    { "source": "/png/:data", "destination": "/api/image?fmt=png&data=:data" },
+    { "source": "/api/:route(reference|examples|prompt|render|png)", "destination": "/api/playground?route=/api/:route" }
+  ],
+  "functions": {
+    "api/*.ts": {
+      "memory": 1024,
+      "maxDuration": 30,
+      "includeFiles": "node_modules/{tsquare,@fontsource/inter/files}/**"
+    }
+  }
+}

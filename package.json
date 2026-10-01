@@ -1,0 +1,24 @@
+{
+  "name": "tsquare.dev",
+  "private": true,
+  "description": "The tsquare website: landing page, playground, docs and render URLs",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "tsx src/build.ts",
+    "dev": "tsx src/dev.ts",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "marked": "18.0.14",
+    "tsquare": "0.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

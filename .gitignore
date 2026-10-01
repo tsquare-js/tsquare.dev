@@ -1,0 +1,19 @@
+# Ignore everything by default; allow only what belongs in the repo.
+*
+!*/
+
+!/.gitignore
+!/README.md
+!/LICENSE
+!/package.json
+!/package-lock.json
+!/tsconfig.json
+!/vercel.json
+
+!/api/*.ts
+!/src/*.ts
+!/src/*.html
+!/src/*.css
+!/examples/*.tsq
+!/assets/*.png
+!/assets/*.svg

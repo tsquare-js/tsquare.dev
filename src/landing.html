@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>tsquare: wireframes in plain text</title>
+<meta name="description" content="Wireframes in plain text: easy for LLMs to write, fast to render as SVG or PNG. Multi-screen boards with notes, ready for your docs.">
+<meta property="og:title" content="tsquare: wireframes in plain text">
+<meta property="og:description" content="Easy for LLMs to write, fast to render as SVG or PNG.">
+<meta property="og:image" content="https://tsquare.dev/logo.png">
+<link rel="icon" type="image/png" href="/mark.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/site.css">
+<style>
+  .hero { background: linear-gradient(180deg, var(--mist) 0%, var(--page) 100%); }
+  .hero .inner { max-width: 1160px; margin: 0 auto; padding: 64px 20px 40px; display: grid; grid-template-columns: minmax(0, 1fr) 200px; gap: 40px; align-items: center; }
+  .hero h1 { color: var(--navy); font-size: clamp(36px, 6vw, 60px); line-height: 1.05; letter-spacing: -0.03em; margin: 0 0 16px; font-weight: 800; }
+  .hero p.lead { font-size: clamp(17px, 2.2vw, 21px); color: var(--text); max-width: 620px; margin: 0 0 28px; }
+  .hero .actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .hero .logo { width: 200px; justify-self: end; filter: drop-shadow(0 10px 24px rgba(3, 45, 123, 0.18)); border-radius: 36px; }
+  .install { display: inline-flex; align-items: center; gap: 10px; background: var(--code-bg); color: var(--code-ink); border-radius: 10px; padding: 8px 8px 8px 16px; font: 14px var(--mono); max-width: 100%; }
+  .install code { background: none; color: inherit; padding: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .install button { background: rgba(255,255,255,.12); color: var(--code-ink); border: 0; border-radius: 7px; padding: 6px 10px; font: 600 13px var(--sans); cursor: pointer; }
+  .install button:hover { background: rgba(255,255,255,.22); }
+
+  /* ── Example viewer ── */
+  .examples { max-width: 1160px; margin: 0 auto; padding: 8px 20px 0; }
+  .viewer { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 18px 48px -24px rgba(3, 45, 123, 0.35); overflow: hidden; }
+  .viewer-tabs { display: flex; gap: 4px; padding: 10px 12px; border-bottom: 1px solid var(--line); overflow-x: auto; background: #fbfdff; }
+  .viewer-tabs button { border: 0; background: none; padding: 7px 12px; border-radius: 8px; font: 600 14px var(--sans); color: var(--muted); cursor: pointer; white-space: nowrap; }
+  .viewer-tabs button[aria-selected="true"] { background: var(--mist); color: var(--navy); }
+  .viewer-tabs .progress { margin-left: auto; align-self: center; width: 60px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; flex-shrink: 0; }
+  .viewer-tabs .progress span { display: block; height: 100%; width: 0; background: var(--blue); }
+  .viewer-body { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); height: 540px; }
+  .viewer-body pre { margin: 0; border-radius: 0; font-size: 12.5px; height: 100%; overflow: auto; }
+  .viewer-body .render { display: flex; align-items: center; justify-content: center; padding: 16px; background: #e6e8eb; min-height: 0; }
+  .viewer-body .render img { max-height: 100%; max-width: 100%; width: auto; object-fit: contain; transition: opacity .25s; }
+  .viewer-body .render img.loading { opacity: .3; }
+  .viewer-caption { padding: 10px 16px; font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); display: flex; gap: 8px; flex-wrap: wrap; }
+  .viewer-caption a { color: var(--blue-ink); }
+
+  /* ── Reasons ── */
+  .section { max-width: 1160px; margin: 0 auto; padding: 64px 20px 0; }
+  .section h2 { color: var(--navy); font-size: 28px; letter-spacing: -0.02em; margin: 0 0 24px; }
+  .reasons { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+  .reason { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  .reason .badge { width: 40px; height: 40px; border-radius: 10px; background: var(--mist); color: var(--navy); display: grid; place-items: center; margin-bottom: 14px; }
+  .reason .badge svg { width: 22px; height: 22px; }
+  .reason h3 { color: var(--navy); margin: 0 0 8px; font-size: 18px; }
+  .reason p { margin: 0; font-size: 15px; }
+  .uses { display: flex; flex-wrap: wrap; gap: 10px; }
+  .use { background: var(--paper); border: 1px solid var(--line); border-radius: 999px; padding: 8px 16px; font-weight: 600; color: var(--navy); font-size: 15px; text-decoration: none; }
+  a.use:hover { background: var(--mist); }
+  .use small { color: var(--muted); font-weight: 500; margin-left: 4px; }
+
+  @media (max-width: 860px) {
+    .hero .inner { grid-template-columns: 1fr; padding-top: 40px; }
+    .hero .logo { display: none; }
+    .viewer-body { grid-template-columns: 1fr; height: auto; }
+    .viewer-body pre { height: 240px; }
+    .viewer-body .render img { max-height: 420px; }
+    .reasons { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="inner">
+  <a class="brand" href="/"><img src="/mark.png" alt="">tsquare</a>
+  <nav>
+    <a href="/docs">Docs</a>
+    <a href="/playground">Playground</a>
+    <a class="icon" href="https://github.com/tsquare-js/tsquare" aria-label="tsquare on GitHub"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg></a>
+  </nav>
+</div></header>
+
+<section class="hero"><div class="inner">
+  <div>
+    <h1>Wireframes in plain text</h1>
+    <p class="lead">Easy for LLMs to write, fast to render as SVG or PNG. Whole boards of screens, with notes beside them, ready to drop into your docs.</p>
+    <div class="actions">
+      <a class="btn primary" href="/playground">Open the playground</a>
+      <a class="btn secondary" href="/docs/getting-started">Read the docs</a>
+    </div>
+    <div class="install"><code id="cmd">npx tsquare render login.tsq -o login.png</code><button type="button" id="copy">Copy</button></div>
+  </div>
+  <img class="logo" src="/logo.png" alt="tsquare logo">
+</div></section>
+
+<section class="examples" aria-label="Examples">
+  <div class="viewer">
+    <div class="viewer-tabs" role="tablist" id="tabs"><div class="progress" aria-hidden="true"><span id="bar"></span></div></div>
+    <div class="viewer-body">
+      <pre><code id="source"></code></pre>
+      <div class="render"><img id="render" alt=""></div>
+    </div>
+    <div class="viewer-caption">The image is rendered live from the text by this site's render URL. <a id="image-link" href="#">Open the image</a> · <a href="/playground">Edit your own</a></div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Why tsquare</h2>
+  <div class="reasons">
+    <div class="reason">
+      <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="13" x="2" y="6" rx="1.5"/><rect width="7" height="13" x="15" y="6" rx="1.5"/><path d="M11 12h2"/></svg></div>
+      <h3>Boards, not single screens</h3>
+      <p>Several devices side by side (phone, tablet, desktop), with sticky notes for open questions. A whole feature on one image.</p>
+    </div>
+    <div class="reason">
+      <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3m6.4-.4-2.1 2.1M21 12h-3M6 12H3m3.7-6.3 2.1 2.1"/><circle cx="12" cy="14" r="5"/><path d="m10.5 14 1 1 2-2"/></svg></div>
+      <h3>Written by AI, measured</h3>
+      <p>Sonnet wrote valid tsquare on the first try in 20 of 20 tests. Mistakes come back by line, with "did you mean", so models fix their own output. <a href="https://github.com/tsquare-js/tsquare/blob/main/eval/README.md">See the evals</a>.</p>
+    </div>
+    <div class="reason">
+      <div class="badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2Z"/><path d="M9 13h6M9 17h4"/></svg></div>
+      <h3>Ready for your docs</h3>
+      <p>Clean grayscale SVG or PNG with one accent color. Image URLs work anywhere an image does: Notion, GitHub, docs sites.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <h2>Use it with</h2>
+  <div class="uses">
+    <a class="use" href="/docs/ai#the-claude-skill">Claude skill</a>
+    <a class="use" href="/docs/ai#the-prompt">Any LLM, with the prompt</a>
+    <a class="use" href="/docs/getting-started">The CLI</a>
+    <a class="use" href="/docs/ai#the-repair-loop">Node library</a>
+    <span class="use">Image URLs</span>
+    <span class="use">MCP<small>soon</small></span>
+    <span class="use">Obsidian<small>soon</small></span>
+  </div>
+</section>
+
+<footer class="site-footer"><div class="inner">
+  <span>tsquare {{VERSION}} · MIT license</span>
+  <span class="spacer"></span>
+  <a href="https://github.com/tsquare-js/tsquare">GitHub</a>
+  <a href="https://www.npmjs.com/package/tsquare">npm</a>
+  <a href="/docs">Docs</a>
+</div></footer>
+
+<script>
+const EXAMPLES = {{EXAMPLES_JSON}};
+const ROTATE_MS = 7000;
+const tabs = document.getElementById("tabs");
+const bar = document.getElementById("bar");
+const img = document.getElementById("render");
+let index = 0, timer = null, started = 0, paused = false;
+
+EXAMPLES.forEach((ex, i) => {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.role = "tab";
+  b.textContent = ex.title;
+  b.addEventListener("click", () => { show(i); restart(); });
+  tabs.insertBefore(b, tabs.lastElementChild);
+});
+
+function show(i) {
+  index = i;
+  const ex = EXAMPLES[i];
+  [...tabs.querySelectorAll("button")].forEach((b, j) => b.setAttribute("aria-selected", String(j === i)));
+  document.getElementById("source").textContent = ex.source;
+  img.classList.add("loading");
+  img.onload = () => img.classList.remove("loading");
+  img.src = ex.src;
+  img.alt = ex.title + " wireframe";
+  document.getElementById("image-link").href = ex.src;
+}
+
+// Rotate every few seconds; pause while the pointer is over the viewer or the tab is hidden.
+function tick(now) {
+  if (!paused && !document.hidden) {
+    const t = (now - started) / ROTATE_MS;
+    bar.style.width = Math.min(100, t * 100) + "%";
+    if (t >= 1) { show((index + 1) % EXAMPLES.length); started = now; }
+  } else {
+    started = now - (parseFloat(bar.style.width) || 0) / 100 * ROTATE_MS;
+  }
+  timer = requestAnimationFrame(tick);
+}
+function restart() { started = performance.now(); bar.style.width = "0%"; }
+const viewer = document.querySelector(".viewer");
+viewer.addEventListener("mouseenter", () => (paused = true));
+viewer.addEventListener("mouseleave", () => (paused = false));
+viewer.addEventListener("focusin", () => (paused = true));
+viewer.addEventListener("focusout", () => (paused = false));
+
+// Preload the other renders so switching is instant.
+EXAMPLES.slice(1).forEach((ex) => { const p = new Image(); p.src = ex.src; });
+show(0);
+if (!matchMedia("(prefers-reduced-motion: reduce)").matches) { restart(); timer = requestAnimationFrame(tick); }
+
+document.getElementById("copy").addEventListener("click", async (e) => {
+  try { await navigator.clipboard.writeText(document.getElementById("cmd").textContent); e.target.textContent = "Copied"; }
+  catch { e.target.textContent = "Select it"; }
+  setTimeout(() => (e.target.textContent = "Copy"), 1500);
+});
+</script>
+</body>
+</html>
