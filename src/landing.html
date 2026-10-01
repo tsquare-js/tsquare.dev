@@ -9,9 +9,7 @@
 <meta property="og:description" content="Easy for LLMs to write, fast to render as SVG or PNG.">
 <meta property="og:image" content="https://tsquare.dev/logo.png">
 <link rel="icon" type="image/png" href="/mark.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
 <style>
   .hero { background: linear-gradient(180deg, var(--mist) 0%, var(--page) 100%); }
@@ -28,12 +26,24 @@
   /* ── Example viewer ── */
   .examples { max-width: 1160px; margin: 0 auto; padding: 8px 20px 0; }
   .viewer { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 18px 48px -24px rgba(3, 45, 123, 0.35); overflow: hidden; }
-  .viewer-tabs { display: flex; gap: 4px; padding: 10px 12px; border-bottom: 1px solid var(--line); overflow-x: auto; background: #fbfdff; scrollbar-width: none; }
+  .viewer-head { display: flex; align-items: center; border-bottom: 1px solid var(--line); background: #fbfdff; }
+  .viewer-tabs { display: flex; gap: 4px; padding: 10px 12px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
   .viewer-tabs::-webkit-scrollbar { display: none; }
+  /* fade the edge that has more tabs past it, so it's clear the row scrolls */
+  .viewer-tabs.more-right { mask-image: linear-gradient(to right, #000 calc(100% - 40px), transparent); }
+  .viewer-tabs.more-left { mask-image: linear-gradient(to left, #000 calc(100% - 40px), transparent); }
+  .viewer-tabs.more-left.more-right { mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); }
+  .controls { display: flex; align-items: center; gap: 2px; padding: 0 10px 0 4px; flex-shrink: 0; }
+  .controls button { border: 0; background: none; width: 32px; height: 32px; border-radius: 8px; color: var(--navy); cursor: pointer; display: none; place-items: center; }
+  .controls button:hover { background: var(--mist); }
+  .controls button svg { width: 18px; height: 18px; }
+  .ring { width: 24px; height: 24px; flex-shrink: 0; }
+  .ring circle { fill: none; stroke-width: 3; }
+  .ring .track { stroke: var(--line); }
+  .ring .fill { stroke: var(--blue); stroke-linecap: round; transform: rotate(-90deg); transform-origin: center; }
+  .count { font: 600 13px var(--sans); color: var(--muted); min-width: 34px; text-align: center; display: none; }
   .viewer-tabs button { border: 0; background: none; padding: 7px 12px; border-radius: 8px; font: 600 14px var(--sans); color: var(--muted); cursor: pointer; white-space: nowrap; }
   .viewer-tabs button[aria-selected="true"] { background: var(--mist); color: var(--navy); }
-  .viewer-tabs .progress { margin-left: auto; align-self: center; width: 60px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; flex-shrink: 0; }
-  .viewer-tabs .progress span { display: block; height: 100%; width: 0; background: var(--blue); }
   .viewer-body { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); height: 540px; }
   .viewer-body pre { margin: 0; border-radius: 0; font-size: 12.5px; height: 100%; overflow: auto; }
   .viewer-body .render { display: flex; align-items: center; justify-content: center; padding: 16px; background: #e6e8eb; min-height: 0; }
@@ -64,7 +74,9 @@
     .viewer-body .render { order: -1; padding: 12px; }   /* the picture first on phones */
     .viewer-body .render img { width: 100%; height: auto; max-height: none; }
     .viewer-body pre { height: 220px; }
-    .viewer-tabs .progress { display: none; }
+    .controls button { display: grid; }
+    .count { display: block; }
+    .viewer-body .render { touch-action: pan-y; }
     .reasons { grid-template-columns: minmax(0, 1fr); }
   }
   @media (max-width: 520px) {
@@ -100,7 +112,15 @@
 
 <section class="examples" aria-label="Examples">
   <div class="viewer">
-    <div class="viewer-tabs" role="tablist" id="tabs"><div class="progress" aria-hidden="true"><span id="bar"></span></div></div>
+    <div class="viewer-head">
+      <div class="viewer-tabs" role="tablist" id="tabs" aria-label="Examples"></div>
+      <div class="controls">
+        <button type="button" id="prev" aria-label="Previous example"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg></button>
+        <svg class="ring" viewBox="0 0 24 24" aria-hidden="true"><circle class="track" cx="12" cy="12" r="9"/><circle class="fill" id="ring" cx="12" cy="12" r="9" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/></svg>
+        <span class="count" id="count" aria-live="polite"></span>
+        <button type="button" id="next" aria-label="Next example"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg></button>
+      </div>
+    </div>
     <div class="viewer-body">
       <pre><code id="source"></code></pre>
       <div class="render"><img id="render" alt=""></div>
@@ -149,29 +169,40 @@
   <a href="https://github.com/tsquare-js/tsquare">GitHub</a>
   <a href="https://www.npmjs.com/package/tsquare">npm</a>
   <a href="/docs">Docs</a>
+  <a href="/privacy">Privacy</a>
 </div></footer>
 
 <script>
 const EXAMPLES = {{EXAMPLES_JSON}};
 const ROTATE_MS = 7000;
 const tabs = document.getElementById("tabs");
-const bar = document.getElementById("bar");
+const ring = document.getElementById("ring");
 const img = document.getElementById("render");
-let index = 0, timer = null, started = 0, paused = false;
+const viewer = document.querySelector(".viewer");
+let index = 0;
+let progress = 0;        // 0..1 of the current example's time
+let last = performance.now();
+let paused = false;
 
 EXAMPLES.forEach((ex, i) => {
   const b = document.createElement("button");
   b.type = "button";
   b.role = "tab";
   b.textContent = ex.title;
-  b.addEventListener("click", () => { show(i); restart(); });
-  tabs.insertBefore(b, tabs.lastElementChild);
+  b.addEventListener("click", () => show(i));
+  tabs.appendChild(b);
 });
 
 function show(i) {
-  index = i;
-  const ex = EXAMPLES[i];
-  [...tabs.querySelectorAll("button")].forEach((b, j) => b.setAttribute("aria-selected", String(j === i)));
+  index = (i + EXAMPLES.length) % EXAMPLES.length;
+  progress = 0;
+  const ex = EXAMPLES[index];
+  const buttons = [...tabs.querySelectorAll("button")];
+  buttons.forEach((b, j) => b.setAttribute("aria-selected", String(j === index)));
+  // keep the active tab visible without scrolling the page
+  const b = buttons[index];
+  tabs.scrollTo({ left: b.offsetLeft - tabs.clientWidth / 2 + b.offsetWidth / 2, behavior: "smooth" });
+  document.getElementById("count").textContent = `${index + 1} / ${EXAMPLES.length}`;
   document.getElementById("source").textContent = ex.source;
   img.classList.add("loading");
   img.onload = () => img.classList.remove("loading");
@@ -180,28 +211,50 @@ function show(i) {
   document.getElementById("image-link").href = ex.src;
 }
 
-// Rotate every few seconds; pause while the pointer is over the viewer or the tab is hidden.
-function tick(now) {
-  if (!paused && !document.hidden) {
-    const t = (now - started) / ROTATE_MS;
-    bar.style.width = Math.min(100, t * 100) + "%";
-    if (t >= 1) { show((index + 1) % EXAMPLES.length); started = now; }
-  } else {
-    started = now - (parseFloat(bar.style.width) || 0) / 100 * ROTATE_MS;
-  }
-  timer = requestAnimationFrame(tick);
+function updateEdges() {
+  tabs.classList.toggle("more-left", tabs.scrollLeft > 4);
+  tabs.classList.toggle("more-right", tabs.scrollLeft + tabs.clientWidth < tabs.scrollWidth - 4);
 }
-function restart() { started = performance.now(); bar.style.width = "0%"; }
-const viewer = document.querySelector(".viewer");
+tabs.addEventListener("scroll", updateEdges, { passive: true });
+addEventListener("resize", updateEdges);
+
+document.getElementById("prev").addEventListener("click", () => show(index - 1));
+document.getElementById("next").addEventListener("click", () => show(index + 1));
+
+// Swipe the picture to change examples on touch screens.
+let touchX = null;
+const render = document.querySelector(".viewer-body .render");
+render.addEventListener("touchstart", (e) => (touchX = e.touches[0].clientX), { passive: true });
+render.addEventListener("touchend", (e) => {
+  if (touchX === null) return;
+  const dx = e.changedTouches[0].clientX - touchX;
+  if (Math.abs(dx) > 40) show(index + (dx < 0 ? 1 : -1));
+  touchX = null;
+});
+
+// The ring fills over ROTATE_MS, then the next example shows. Pauses while the
+// pointer or focus is in the viewer, or the tab is hidden.
 viewer.addEventListener("mouseenter", () => (paused = true));
 viewer.addEventListener("mouseleave", () => (paused = false));
 viewer.addEventListener("focusin", () => (paused = true));
 viewer.addEventListener("focusout", () => (paused = false));
+function tick(now) {
+  const dt = now - last;
+  last = now;
+  if (!paused && !document.hidden) {
+    progress += dt / ROTATE_MS;
+    if (progress >= 1) show(index + 1);
+  }
+  ring.style.strokeDashoffset = String(100 - progress * 100);
+  requestAnimationFrame(tick);
+}
 
 // Preload the other renders so switching is instant.
 EXAMPLES.slice(1).forEach((ex) => { const p = new Image(); p.src = ex.src; });
 show(0);
-if (!matchMedia("(prefers-reduced-motion: reduce)").matches) { restart(); timer = requestAnimationFrame(tick); }
+updateEdges();
+if (matchMedia("(prefers-reduced-motion: reduce)").matches) ring.closest("svg").style.display = "none";
+else requestAnimationFrame(tick);
 
 document.getElementById("copy").addEventListener("click", async (e) => {
   try { await navigator.clipboard.writeText(document.getElementById("cmd").textContent); e.target.textContent = "Copied"; }
@@ -209,5 +262,6 @@ document.getElementById("copy").addEventListener("click", async (e) => {
   setTimeout(() => (e.target.textContent = "Copy"), 1500);
 });
 </script>
+<script src="/console.js" defer></script>
 </body>
 </html>

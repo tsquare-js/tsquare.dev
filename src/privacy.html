@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy · tsquare</title>
+<link rel="icon" type="image/png" href="/mark.png">
+<link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css">
+<style>
+  .page { max-width: 760px; margin: 0 auto; padding: 40px 20px 0; }
+  article { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 36px 44px; }
+  article h1 { color: var(--navy); font-size: 34px; letter-spacing: -0.02em; margin: 0 0 6px; }
+  article h2 { color: var(--navy); font-size: 21px; margin: 32px 0 10px; }
+  article .updated { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
+  article .short { background: var(--mist); border-radius: 10px; padding: 16px 20px; }
+  article .short ul { margin: 0; padding-left: 20px; }
+  @media (max-width: 640px) { article { padding: 24px 20px; } }
+</style>
+</head>
+<body>
+<header class="site-header"><div class="inner">
+  <a class="brand" href="/"><img src="/mark.png" alt="">tsquare</a>
+  <nav>
+    <a href="/docs">Docs</a>
+    <a href="/playground">Playground</a>
+  </nav>
+</div></header>
+<div class="page"><article>
+  <h1>Privacy</h1>
+  <p class="updated">Last updated October 1, 2026</p>
+
+  <div class="short">
+    <ul>
+      <li>No accounts, cookies, analytics, ads or tracking.</li>
+      <li>We don't store your wireframes.</li>
+      <li><strong>Image links contain your wireframe.</strong> Anyone who has the link can read it, so don't put anything secret in one you share.</li>
+    </ul>
+  </div>
+
+  <h2>When you visit the site</h2>
+  <p>The site is hosted by Vercel. To serve each page, Vercel receives your request (including your IP address and browser details) and keeps standard request logs for a limited time, under <a href="https://vercel.com/legal/privacy-policy">Vercel's privacy policy</a>. Fonts, images and scripts all come from this site, so pages don't contact any other company. Links to GitHub and npm only do so if you follow them.</p>
+
+  <h2>When you use the playground</h2>
+  <p>To draw the picture, the playground sends your wireframe text to our server, which renders it and sends the image back. The text is handled in memory and not saved.</p>
+  <p>The playground remembers your current wireframe in your own browser (local storage), so it's still there when you come back. It never leaves your device that way, and clearing this site's data removes it.</p>
+
+  <h2>Image links</h2>
+  <p>An image link such as <code>tsquare.dev/svg/…</code> or <code>tsquare.dev/png/…</code> carries the wireframe inside the link itself. The text is compressed to keep the link short, <strong>not encrypted</strong>: anyone with the link can turn it back into the text.</p>
+  <p>When the image is requested, our server reads the wireframe from the link and draws it. We don't store it. Because the text is part of the link, it can appear in our host's request logs, and the drawn image is cached on Vercel's network so it loads quickly. Services where you paste the link, such as Notion or GitHub, may fetch and keep their own copy.</p>
+
+  <h2>Fair use</h2>
+  <p>Please don't use the rendering service for unlawful content, or in ways that degrade it for others, such as heavy automated traffic. We may block traffic that does.</p>
+
+  <h2>No warranty</h2>
+  <p>tsquare and this site are open source under the MIT license and provided as is, without warranty. If you need full control, run tsquare yourself: <code>npx tsquare</code> renders entirely on your own machine.</p>
+
+  <h2>Questions</h2>
+  <p>Open an issue on <a href="https://github.com/tsquare-js/tsquare.dev/issues">GitHub</a>.</p>
+</article></div>
+<footer class="site-footer"><div class="inner">
+  <span>tsquare {{VERSION}} · MIT license</span>
+  <span class="spacer"></span>
+  <a href="https://github.com/tsquare-js/tsquare">GitHub</a>
+  <a href="https://www.npmjs.com/package/tsquare">npm</a>
+  <a href="/privacy">Privacy</a>
+</div></footer>
+<script src="/console.js" defer></script>
+</body>
+</html>

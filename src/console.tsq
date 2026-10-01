@@ -1,0 +1,10 @@
+board "Hello, inspector"
+  screen custom "DevTools" width=440 height=230
+    stack row justify=between align=center
+      heading "Console" level=3
+      badge "1 easter egg" tone=success
+    divider
+    text "You opened the console. Hi!"
+    text "Everything on tsquare.dev is drawn from plain text like this." sm muted
+    spacer
+    button primary "Open the playground" icon=pencil

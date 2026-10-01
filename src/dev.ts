@@ -20,6 +20,7 @@ const TYPES: Record<string, string> = {
   ".png": "image/png",
   ".svg": "image/svg+xml",
   ".js": "text/javascript; charset=utf-8",
+  ".woff2": "font/woff2",
 };
 
 /** cleanUrls: /docs/language → language.html, /docs → docs/index.html */

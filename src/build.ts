@@ -13,6 +13,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdir
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { Script } from "node:vm";
 import { deflateRawSync } from "node:zlib";
 import { Marked } from "marked";
 import { compileWireframe, formatIssues } from "tsquare";
@@ -32,6 +33,10 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 for (const f of ["logo.png", "mark.png"]) copyFileSync(path.join("assets", f), path.join(OUT, f));
 copyFileSync("src/site.css", path.join(OUT, "site.css"));
+// Inter from @fontsource, served by the site itself so no visitor data goes to a font CDN.
+mkdirSync(path.join(OUT, "fonts"), { recursive: true });
+const fontsDir = path.join(path.dirname(require.resolve("@fontsource/inter/package.json")), "files");
+for (const w of [400, 500, 600, 700, 800]) copyFileSync(path.join(fontsDir, `inter-latin-${w}-normal.woff2`), path.join(OUT, "fonts", `inter-latin-${w}-normal.woff2`));
 
 // ── Landing page ────────────────────────────────────────────────────────
 
@@ -51,6 +56,32 @@ const landing = readFileSync("src/landing.html", "utf8")
   .replace("{{EXAMPLES_JSON}}", JSON.stringify(examples).replace(/</g, "\\u003c"));
 writeFileSync(path.join(OUT, "index.html"), landing);
 
+// ── Privacy page ────────────────────────────────────────────────────────
+
+writeFileSync(path.join(OUT, "privacy.html"), readFileSync("src/privacy.html", "utf8").replaceAll("{{VERSION}}", VERSION));
+
+// ── Console easter egg: the picture of src/console.tsq, then its source ─
+
+{
+  const source = readFileSync("src/console.tsq", "utf8").trimEnd();
+  const { issues } = compileWireframe(source);
+  if (issues.length) throw new Error(`src/console.tsq:\n${formatIssues(issues)}`);
+  const egg = `// Open the console. tsquare draws pictures from plain text, including this one.
+(() => {
+  const src = location.origin + ${JSON.stringify(`/svg/${encode(source)}`)};
+  const source = ${JSON.stringify(source)};
+  console.log("%c ", \`font-size: 1px; padding: 112px 276px; background: url(\${src}) no-repeat center / contain;\`);
+  console.log(
+    "%cYou found the console.%c\\n\\nThat picture is drawn from this tsquare text:\\n\\n" + source + "\\n\\nPaste it into " + location.origin + "/playground and change something.",
+    "font: 700 16px Inter, system-ui, sans-serif; color: #032d7b;",
+    "font: 13px ui-monospace, Menlo, monospace; color: inherit;",
+  );
+})();
+`;
+  new Script(egg); // fail the build on a syntax error rather than ship it
+  writeFileSync(path.join(OUT, "console.js"), egg);
+}
+
 // ── Playground: the package's own page, with a link back to the site ────
 
 const playgroundHeader = '<h1><img src="/mark.png" alt="">tsquare</h1>';
@@ -58,7 +89,11 @@ const playground = readFileSync(path.join(tsquareDir, "dist/playground/index.htm
 if (!playground.includes(playgroundHeader)) throw new Error("playground header changed; update the link-back in src/build.ts");
 writeFileSync(
   path.join(OUT, "playground.html"),
-  playground.replace(playgroundHeader, `<h1><a href="/" style="display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none"><img src="/mark.png" alt="">tsquare</a></h1>`),
+  playground
+    .replace(playgroundHeader, `<h1><a href="/" style="display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none"><img src="/mark.png" alt="">tsquare</a></h1>`)
+    // The playground sends text to the server to render, so link the privacy page from it.
+    .replace("</header>", `<a href="/privacy" style="margin-left:auto;font-size:13px;color:var(--muted);text-decoration:none">Privacy</a></header>`)
+    .replace("</body>", `<script src="/console.js" defer></script></body>`),
 );
 
 // ── Docs ────────────────────────────────────────────────────────────────
