@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "scripts": {
     "build": "tsx src/build.ts",
@@ -13,11 +13,11 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@types/node": "^26.6.3",
     "marked": "18.0.14",
     "tsquare": "0.2.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.3",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
