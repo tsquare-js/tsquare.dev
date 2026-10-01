@@ -28,7 +28,8 @@
   /* ── Example viewer ── */
   .examples { max-width: 1160px; margin: 0 auto; padding: 8px 20px 0; }
   .viewer { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: 0 18px 48px -24px rgba(3, 45, 123, 0.35); overflow: hidden; }
-  .viewer-tabs { display: flex; gap: 4px; padding: 10px 12px; border-bottom: 1px solid var(--line); overflow-x: auto; background: #fbfdff; }
+  .viewer-tabs { display: flex; gap: 4px; padding: 10px 12px; border-bottom: 1px solid var(--line); overflow-x: auto; background: #fbfdff; scrollbar-width: none; }
+  .viewer-tabs::-webkit-scrollbar { display: none; }
   .viewer-tabs button { border: 0; background: none; padding: 7px 12px; border-radius: 8px; font: 600 14px var(--sans); color: var(--muted); cursor: pointer; white-space: nowrap; }
   .viewer-tabs button[aria-selected="true"] { background: var(--mist); color: var(--navy); }
   .viewer-tabs .progress { margin-left: auto; align-self: center; width: 60px; height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; flex-shrink: 0; }
@@ -56,12 +57,21 @@
   .use small { color: var(--muted); font-weight: 500; margin-left: 4px; }
 
   @media (max-width: 860px) {
-    .hero .inner { grid-template-columns: 1fr; padding-top: 40px; }
+    /* minmax(0, …) lets long content (the npx command) shrink instead of widening the page */
+    .hero .inner { grid-template-columns: minmax(0, 1fr); padding-top: 36px; }
     .hero .logo { display: none; }
-    .viewer-body { grid-template-columns: 1fr; height: auto; }
-    .viewer-body pre { height: 240px; }
-    .viewer-body .render img { max-height: 420px; }
-    .reasons { grid-template-columns: 1fr; }
+    .viewer-body { grid-template-columns: minmax(0, 1fr); height: auto; }
+    .viewer-body .render { order: -1; padding: 12px; }   /* the picture first on phones */
+    .viewer-body .render img { width: 100%; height: auto; max-height: none; }
+    .viewer-body pre { height: 220px; }
+    .viewer-tabs .progress { display: none; }
+    .reasons { grid-template-columns: minmax(0, 1fr); }
+  }
+  @media (max-width: 520px) {
+    .hero .actions .btn { flex: 1 1 100%; justify-content: center; }
+    .install { display: flex; width: 100%; }
+    .install code { flex: 1; min-width: 0; }
+    .section { padding-top: 48px; }
   }
 </style>
 </head>
