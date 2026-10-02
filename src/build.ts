@@ -1,7 +1,7 @@
 /**
  * Builds the static part of tsquare.dev into public/:
- *   index.html          landing page, with the examples in examples/ as render URLs
- *   playground.html     the playground page from the installed tsquare package
+ *   index.html          landing page, with the installed package's examples as render URLs
+ *   playground.html     the playground page and its script from the installed tsquare package
  *   docs/**             the library repo's docs/, as HTML, at the commit npm
  *                       recorded for the installed tsquare version
  *
@@ -40,11 +40,14 @@ for (const w of [400, 500, 600, 700, 800]) copyFileSync(path.join(fontsDir, `int
 
 // ── Landing page ────────────────────────────────────────────────────────
 
-const examples = readdirSync("examples")
-  .filter((f) => f.endsWith(".tsq"))
-  .sort()
-  .map((f) => {
-    const source = readFileSync(path.join("examples", f), "utf8").trimEnd();
+// The package's own examples, so they always match the installed version's language.
+const EXAMPLES = ["sign-in", "dashboard", "checkout", "states"];
+const examples = EXAMPLES
+  .map((name) => {
+    const f = `${name}.tsq`;
+    const file = path.join(tsquareDir, "examples", f);
+    if (!existsSync(file)) throw new Error(`tsquare ${VERSION} has no examples/${f}; update EXAMPLES in src/build.ts`);
+    const source = readFileSync(file, "utf8").trimEnd();
     const { spec, issues } = compileWireframe(source);
     if (!spec || issues.length) throw new Error(`examples/${f}:\n${formatIssues(issues)}`);
     const title = (spec.elements[spec.root].props as { title?: string }).title ?? f;
@@ -82,19 +85,25 @@ writeFileSync(path.join(OUT, "privacy.html"), readFileSync("src/privacy.html", "
   writeFileSync(path.join(OUT, "console.js"), egg);
 }
 
-// ── Playground: the package's own page, with a link back to the site ────
+// ── Playground: the package's own page and script ─────────────────────
 
-const playgroundHeader = '<h1><img src="/mark.png" alt="">tsquare</h1>';
-const playground = readFileSync(path.join(tsquareDir, "dist/playground/index.html"), "utf8");
-if (!playground.includes(playgroundHeader)) throw new Error("playground header changed; update the link-back in src/build.ts");
+const playgroundDir = path.join(tsquareDir, "dist/playground");
+const playground = readFileSync(path.join(playgroundDir, "index.html"), "utf8");
+const themeButton = '<button class="btn quiet icon-only" id="theme"';
+for (const marker of ["</head>", themeButton, "</body>"]) {
+  if (!playground.includes(marker)) throw new Error(`playground page has no ${marker}; update the playground section of src/build.ts`);
+}
 writeFileSync(
   path.join(OUT, "playground.html"),
   playground
-    .replace(playgroundHeader, `<h1><a href="/" style="display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none"><img src="/mark.png" alt="">tsquare</a></h1>`)
+    // Share and image links point at whichever deploy serves the page (previews link to themselves),
+    // and the logo goes home in the same tab.
+    .replace("</head>", `<script>window.TSQUARE_BASE = location.origin;</script></head>`)
     // The playground sends text to the server to render, so link the privacy page from it.
-    .replace("</header>", `<a href="/privacy" style="margin-left:auto;font-size:13px;color:var(--muted);text-decoration:none">Privacy</a></header>`)
+    .replace(themeButton, `<a href="/privacy" style="font-size:13px;color:var(--muted);text-decoration:none;margin-right:8px">Privacy</a>${themeButton}`)
     .replace("</body>", `<script src="/console.js" defer></script></body>`),
 );
+copyFileSync(path.join(playgroundDir, "playground.js"), path.join(OUT, "playground.js"));
 
 // ── Docs ────────────────────────────────────────────────────────────────
 

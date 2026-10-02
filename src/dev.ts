@@ -46,7 +46,7 @@ createServer(async (req, res) => {
       req.url = url.pathname + url.search;
       return await image(req, res);
     }
-    const api = url.pathname.match(/^\/api\/(reference|examples|prompt|render|png)$/);
+    const api = url.pathname.match(/^\/api\/(reference|examples|prompt|render|png|language)$/);
     if (api) {
       url.searchParams.set("route", url.pathname);
       req.url = "/api/playground" + url.search;

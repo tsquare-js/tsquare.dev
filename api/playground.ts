@@ -1,10 +1,10 @@
 /**
  * The playground's endpoints (/api/reference, /api/examples, /api/prompt,
- * /api/render, /api/png), answered by the handler shipped in the tsquare
+ * /api/render, /api/png, /api/language), answered by the handler shipped in the tsquare
  * package, so the hosted playground runs the same code as `tsquare playground`.
  *
- * vercel.json rewrites those paths here as ?route=/api/…; the page itself and
- * /mark.png are static files.
+ * vercel.json rewrites those paths here as ?route=/api/…; the page itself,
+ * /playground.js and /mark.png are static files.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createPlaygroundHandler } from "tsquare/playground";

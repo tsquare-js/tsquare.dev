@@ -8,7 +8,7 @@ The language, the renderer, the playground and the docs' Markdown live in the [t
 
 | Path | What it is |
 |---|---|
-| `/` | landing page (`src/landing.html`), with the examples in `examples/` rendered live |
+| `/` | landing page (`src/landing.html`), with the installed `tsquare` package's examples rendered live |
 | `/playground` | the playground page shipped in the `tsquare` package |
 | `/docs/…` | the tsquare repo's `docs/`, as HTML |
 | `/svg/<data>`, `/png/<data>?scale=2` | render URLs (`api/image.ts`) |
