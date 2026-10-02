@@ -9,17 +9,14 @@
  * vercel.json rewrites /svg/:data and /png/:data here as ?fmt=…&data=….
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { inflateRawSync } from "node:zlib";
-import { compileWireframe, renderWireframePng, renderWireframeSvg } from "tsquare";
+import { compileWireframe, decodeWireframe, renderWireframePng, renderWireframeSvg } from "tsquare";
 
 const MAX_DATA = 16_000; // characters in the URL
-const MAX_TEXT = 64_000; // bytes after inflating
 
+/** The library's decoder (which caps the inflated size), plus a cap on the URL itself. */
 export function decode(data: string): string {
-  if (!data.startsWith("z")) throw new Error(`unknown encoding "${data.slice(0, 1)}" (expected a "z" prefix)`);
   if (data.length > MAX_DATA) throw new Error("wireframe is too long for a URL");
-  const bytes = inflateRawSync(Buffer.from(data.slice(1), "base64url"), { maxOutputLength: MAX_TEXT });
-  return bytes.toString("utf8");
+  return decodeWireframe(data);
 }
 
 const escape = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);

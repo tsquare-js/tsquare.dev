@@ -28,13 +28,13 @@
 </div></header>
 <div class="page"><article>
   <h1>Privacy</h1>
-  <p class="updated">Last updated October 1, 2026</p>
+  <p class="updated">Last updated October 2, 2026</p>
 
   <div class="short">
     <ul>
       <li>No accounts, cookies, analytics, ads or tracking.</li>
       <li>We don't store your wireframes.</li>
-      <li><strong>Image links contain your wireframe.</strong> Anyone who has the link can read it, so don't put anything secret in one you share.</li>
+      <li><strong>Image and share links contain your wireframe.</strong> Anyone who has the link can read it, so don't put anything secret in one you share.</li>
     </ul>
   </div>
 
@@ -43,11 +43,12 @@
 
   <h2>When you use the playground</h2>
   <p>To draw the picture, the playground sends your wireframe text to our server, which renders it and sends the image back. The text is handled in memory and not saved.</p>
-  <p>The playground remembers your current wireframe in your own browser (local storage), so it's still there when you come back. It never leaves your device that way, and clearing this site's data removes it.</p>
+  <p>The playground remembers your current wireframe and your light or dark theme in your own browser (local storage), so they're still there when you come back. It never leaves your device that way, and clearing this site's data removes it.</p>
 
-  <h2>Image links</h2>
+  <h2>Image and share links</h2>
   <p>An image link such as <code>tsquare.dev/svg/…</code> or <code>tsquare.dev/png/…</code> carries the wireframe inside the link itself. The text is compressed to keep the link short, <strong>not encrypted</strong>: anyone with the link can turn it back into the text.</p>
   <p>When the image is requested, our server reads the wireframe from the link and draws it. We don't store it. Because the text is part of the link, it can appear in our host's request logs, and the drawn image is cached on Vercel's network so it loads quickly. Services where you paste the link, such as Notion or GitHub, may fetch and keep their own copy.</p>
+  <p>A share link such as <code>tsquare.dev/playground#…</code> carries the wireframe the same way, after the <code>#</code>. Browsers don't send that part of a link to any server, so opening a share link doesn't reach us until the playground draws the wireframe, just as it does when you type one. Like an image link, it's compressed, not encrypted: anyone with the link can read the wireframe.</p>
 
   <h2>Fair use</h2>
   <p>Please don't use the rendering service for unlawful content, or in ways that degrade it for others, such as heavy automated traffic. We may block traffic that does.</p>
