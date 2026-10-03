@@ -140,8 +140,18 @@ const NAV = [
   ["Using it with AI", "ai.md"],
 ];
 
+/**
+ * A docs snippet as a whole wireframe, for its playground link. Fragments are indented as they'd
+ * sit in a board: 2 spaces for screens and notes, 4 for a screen's content.
+ */
+function asWireframe(snippet: string) {
+  const indent = snippet.match(/^ */)![0].length;
+  return indent === 0 ? snippet : indent === 2 ? `board\n${snippet}` : `board\n  screen phone\n${snippet}`;
+}
+
 function renderDoc(rel: string) {
   const dir = path.posix.dirname(rel);
+  const url = pageUrl(rel);
   // Resolve relative links: other docs become site pages; anything outside docs/ links to GitHub.
   const resolve = (href: string, isImage: boolean) => {
     if (/^(https?:|mailto:|#|\/)/.test(href)) return href;
@@ -164,13 +174,19 @@ function renderDoc(rel: string) {
       image({ href, text }) {
         return `<img src="${escapeHtml(resolve(href, true))}" alt="${escapeHtml(text)}" loading="lazy">`;
       },
+      // Every code block gets Copy; tsquare blocks also open in the playground (a share link made here).
+      code({ text, lang }) {
+        const open = lang === "tsquare"
+          ? `<a class="code-open" href="/playground#${encode(asWireframe(text))}" data-track="docs_example_opened" data-track-label="${escapeHtml(url)}">Open in playground</a>`
+          : "";
+        return `<div class="code"><div class="code-bar">${open}<button type="button" class="code-copy">Copy</button></div><pre><code${lang ? ` class="language-${escapeHtml(lang)}"` : ""}>${escapeHtml(text)}</code></pre></div>\n`;
+      },
     },
   });
   // Raw HTML in the docs (the centered logo) needs the same link rewriting.
   const md = readFileSync(path.join(docsIn, rel), "utf8").replace(/src="([^"]+)"/g, (_, src) => `src="${resolve(src, true)}"`);
   const body = marked.parse(md) as string;
   const title = md.match(/^# (.+)$/m)?.[1] ?? "Docs";
-  const url = pageUrl(rel);
   const nav = NAV.map(([label, target]) => {
     const href = pageUrl(target);
     const current = url === href || (href === "/docs/components" && url.startsWith("/docs/components"));
