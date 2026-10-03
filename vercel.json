@@ -5,9 +5,26 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/svg/:data", "destination": "/api/image?fmt=svg&data=:data" },
-    { "source": "/png/:data", "destination": "/api/image?fmt=png&data=:data" },
-    { "source": "/api/:route(reference|examples|prompt|render|png|language)", "destination": "/api/playground?route=/api/:route" }
+    {
+      "source": "/ingest/static/:path*",
+      "destination": "https://us-assets.i.posthog.com/static/:path*"
+    },
+    {
+      "source": "/ingest/:path*",
+      "destination": "https://us.i.posthog.com/:path*"
+    },
+    {
+      "source": "/svg/:data",
+      "destination": "/api/image?fmt=svg&data=:data"
+    },
+    {
+      "source": "/png/:data",
+      "destination": "/api/image?fmt=png&data=:data"
+    },
+    {
+      "source": "/api/:route(reference|examples|prompt|render|png|language)",
+      "destination": "/api/playground?route=/api/:route"
+    }
   ],
   "functions": {
     "api/*.ts": {
