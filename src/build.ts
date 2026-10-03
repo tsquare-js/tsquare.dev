@@ -33,6 +33,7 @@ rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 for (const f of ["logo.png", "mark.png"]) copyFileSync(path.join("assets", f), path.join(OUT, f));
 copyFileSync("src/site.css", path.join(OUT, "site.css"));
+copyFileSync("src/analytics.js", path.join(OUT, "analytics.js"));
 // Inter from @fontsource, served by the site itself so no visitor data goes to a font CDN.
 mkdirSync(path.join(OUT, "fonts"), { recursive: true });
 const fontsDir = path.join(path.dirname(require.resolve("@fontsource/inter/package.json")), "files");
@@ -101,7 +102,7 @@ writeFileSync(
     .replace("</head>", `<script>window.TSQUARE_BASE = location.origin;</script></head>`)
     // The playground sends text to the server to render, so link the privacy page from it.
     .replace(themeButton, `<a href="/privacy" style="font-size:13px;color:var(--muted);text-decoration:none;margin-right:8px">Privacy</a>${themeButton}`)
-    .replace("</body>", `<script src="/console.js" defer></script></body>`),
+    .replace("</body>", `<script src="/console.js" defer></script><script src="/analytics.js" defer></script></body>`),
 );
 copyFileSync(path.join(playgroundDir, "playground.js"), path.join(OUT, "playground.js"));
 

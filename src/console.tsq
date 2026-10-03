@@ -7,4 +7,4 @@ board "Hello, inspector"
     text "You opened the console. Hi!"
     text "Everything on tsquare.dev is drawn from plain text like this." sm muted
     spacer
-    button primary "Open the playground" icon=pencil
+    button primary "Open the playground" leadingIcon=pencil

@@ -14,6 +14,7 @@
 !/src/*.ts
 !/src/*.html
 !/src/*.css
+!/src/*.js
 !/src/*.tsq
 !/examples/*.tsq
 !/assets/*.png

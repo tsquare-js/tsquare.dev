@@ -28,18 +28,21 @@
 </div></header>
 <div class="page"><article>
   <h1>Privacy</h1>
-  <p class="updated">Last updated October 2, 2026</p>
+  <p class="updated">Last updated October 3, 2026</p>
 
   <div class="short">
     <ul>
-      <li>No accounts, cookies, analytics, ads or tracking.</li>
+      <li>No accounts, cookies, ads or cross-site tracking.</li>
       <li>We don't store your wireframes.</li>
       <li><strong>Image and share links contain your wireframe.</strong> Anyone who has the link can read it, so don't put anything secret in one you share.</li>
     </ul>
   </div>
 
   <h2>When you visit the site</h2>
-  <p>The site is hosted by Vercel. To serve each page, Vercel receives your request (including your IP address and browser details) and keeps standard request logs for a limited time, under <a href="https://vercel.com/legal/privacy-policy">Vercel's privacy policy</a>. Fonts, images and scripts all come from this site, so pages don't contact any other company. Links to GitHub and npm only do so if you follow them.</p>
+  <p>The site is hosted by Vercel. To serve each page, Vercel receives your request (including your IP address and browser details) and keeps standard request logs for a limited time, under <a href="https://vercel.com/legal/privacy-policy">Vercel's privacy policy</a>. Fonts, images and scripts all come from this site, so pages don't contact any other company. The one exception is usage statistics (below), which are relayed to PostHog through this site. Links to GitHub and npm only do so if you follow them.</p>
+
+  <h2>Usage statistics</h2>
+  <p>We use PostHog to count visits and how the site is used, such as which docs pages are read and whether the playground's buttons get used, so we know what to improve. It runs without cookies and doesn't recognize you across visits. Events record what happened (for example "image link copied"), never the text of your wireframes. The data goes through tsquare.dev to PostHog in the US and is covered by <a href="https://posthog.com/privacy">PostHog's privacy policy</a>.</p>
 
   <h2>When you use the playground</h2>
   <p>To draw the picture, the playground sends your wireframe text to our server, which renders it and sends the image back. The text is handled in memory and not saved.</p>
@@ -67,5 +70,6 @@
   <a href="/privacy">Privacy</a>
 </div></footer>
 <script src="/console.js" defer></script>
+<script src="/analytics.js" defer></script>
 </body>
 </html>
