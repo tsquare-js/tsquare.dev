@@ -136,6 +136,7 @@ const NAV = [
   ["Components", "components/README.md"],
   ["Icons", "icons.md"],
   ["Colors", "colors.md"],
+  ["Embedding", "embedding.md"],
   ["Using it with AI", "ai.md"],
 ];
 
