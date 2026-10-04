@@ -14,9 +14,8 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Script } from "node:vm";
-import { deflateRawSync } from "node:zlib";
 import { Marked } from "marked";
-import { compileWireframe, formatIssues } from "tsquare";
+import { compileWireframe, encodeWireframe, formatIssues } from "tsquare";
 
 const require = createRequire(import.meta.url);
 const OUT = "public";
@@ -24,8 +23,8 @@ const REPO = "https://github.com/tsquare-js/tsquare";
 const tsquareDir = path.dirname(require.resolve("tsquare/package.json"));
 const VERSION: string = JSON.parse(readFileSync(path.join(tsquareDir, "package.json"), "utf8")).version;
 
-/** The render-URL encoding: "z" + base64url(deflate-raw(utf-8)). Must match api/image.ts. */
-export const encode = (text: string) => "z" + deflateRawSync(Buffer.from(text, "utf8"), { level: 9 }).toString("base64url");
+/** The render-URL and share-link encoding: the library's, so links carry the installed version's prefix. */
+export const encode = encodeWireframe;
 
 const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
@@ -42,7 +41,7 @@ for (const w of [400, 500, 600, 700, 800]) copyFileSync(path.join(fontsDir, `int
 // ── Landing page ────────────────────────────────────────────────────────
 
 // The package's own examples, so they always match the installed version's language.
-const EXAMPLES = ["sign-in", "dashboard", "checkout", "states"];
+const EXAMPLES = ["sign-in", "dashboard", "checkout", "sign-up-flow", "states"];
 const examples = EXAMPLES
   .map((name) => {
     const f = `${name}.tsq`;
