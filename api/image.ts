@@ -1,10 +1,11 @@
 /**
- * Render URLs: https://tsquare.dev/svg/<data> and /png/<data>[?scale=2]
+ * Render URLs: https://tsquare.dev/svg/<data> and /png/<data>[?scale=2][&flows=0]
  *
- * <data> is the wireframe text, encoded as "z" + base64url(deflate-raw(utf-8)).
- * The leading "z" names the encoding, so a future format can use another letter
- * without breaking links already pasted into docs. URLs are permanent: never
- * change what an existing prefix means.
+ * <data> is the wireframe text, encoded by the library (encodeWireframe):
+ * a letter + base64url(deflate-raw(utf-8)). The letter names the language version
+ * ("z" before 0.6.0, "y" since), and decodeWireframe reads each as it was meant.
+ * URLs are permanent: never change what an existing prefix means.
+ * ?flows=0 leaves out flow arrows.
  *
  * vercel.json rewrites /svg/:data and /png/:data here as ?fmt=…&data=….
  */
@@ -59,7 +60,8 @@ export default async function handler(req: IncomingMessage, res: ServerResponse)
 
   // The same URL always renders the same image for a given site deploy, so let the CDN keep it.
   const cache = "public, max-age=3600, s-maxage=31536000, stale-while-revalidate=86400";
-  if (fmt === "svg") return send(200, "image/svg+xml; charset=utf-8", await renderWireframeSvg(spec, { skipValidation: true }), cache);
+  const flows = url.searchParams.get("flows") !== "0";
+  if (fmt === "svg") return send(200, "image/svg+xml; charset=utf-8", await renderWireframeSvg(spec, { skipValidation: true, flows }), cache);
   const scale = Math.min(4, Math.max(1, Number(url.searchParams.get("scale") ?? 2) || 2));
-  return send(200, "image/png", await renderWireframePng(spec, { skipValidation: true, scale }), cache);
+  return send(200, "image/png", await renderWireframePng(spec, { skipValidation: true, scale, flows }), cache);
 }
