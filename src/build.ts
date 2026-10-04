@@ -15,7 +15,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { Script } from "node:vm";
 import { Marked } from "marked";
-import { compileWireframe, encodeWireframe, formatIssues } from "tsquare";
+import { compileWireframe, encodeWireframe, formatIssues, theme } from "tsquare";
 
 const require = createRequire(import.meta.url);
 const OUT = "public";
@@ -148,6 +148,15 @@ function asWireframe(snippet: string) {
   return indent === 0 ? snippet : indent === 2 ? `board\n${snippet}` : `board\n  screen phone\n${snippet}`;
 }
 
+/** Text color for a hex background: white when it reads at 4.5:1, otherwise dark (the site's navy). */
+function inkOn(hex: string) {
+  const lum = (h: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  return 1.05 / (lum(hex) + 0.05) >= 4.5 ? "#ffffff" : "#032d7b";
+}
+
 function renderDoc(rel: string) {
   const dir = path.posix.dirname(rel);
   const url = pageUrl(rel);
@@ -161,10 +170,19 @@ function renderDoc(rel: string) {
     if (!isImage && resolved.endsWith(".md")) return pageUrl(resolved) + (hash ? "#" + hash : "");
     return "/docs/" + resolved;
   };
+  // Colors page: color names show on their color too, per section (`blue` the accent is not `blue` the note).
+  // Accents come from the page's own table rows (`blue` | `#2563eb`), note colors from the renderer's theme.
+  const md0 = readFileSync(path.join(docsIn, rel), "utf8");
+  const namedColors: Record<string, Record<string, string>> =
+    rel === "colors.md"
+      ? { accent: Object.fromEntries([...md0.matchAll(/^\| `(\w+)` \| `(#[0-9a-f]{6})` \|$/gim)].map((m) => [m[1], m[2].toLowerCase()])), notes: { ...theme.notes } }
+      : {};
+  let section = "";
   const marked = new Marked({
     renderer: {
       heading({ tokens, depth }) {
         const html = this.parser.parseInline(tokens);
+        if (depth === 2) section = slugify(html);
         return depth === 1 ? `<h1>${html}</h1>\n` : `<h${depth} id="${slugify(html)}">${html}</h${depth}>\n`;
       },
       link({ href, title, tokens }) {
@@ -172,6 +190,11 @@ function renderDoc(rel: string) {
       },
       image({ href, text }) {
         return `<img src="${escapeHtml(resolve(href, true))}" alt="${escapeHtml(text)}" loading="lazy">`;
+      },
+      // Inline code that is exactly a hex color (`#2563eb`) shows on that color, so the Colors page shows its colors.
+      codespan({ text }) {
+        const hex = /^#[0-9a-f]{6}$/i.test(text) ? text.toLowerCase() : namedColors[section]?.[text];
+        return hex ? `<code class="hex" style="background:${hex};color:${inkOn(hex)}">${text}</code>` : false; // false: marked's own (escaping) renderer
       },
       // Every code block gets Copy; tsquare blocks also open in the playground (a share link made here).
       code({ text, lang }) {
@@ -183,7 +206,7 @@ function renderDoc(rel: string) {
     },
   });
   // Raw HTML in the docs (the centered logo) needs the same link rewriting.
-  const md = readFileSync(path.join(docsIn, rel), "utf8").replace(/src="([^"]+)"/g, (_, src) => `src="${resolve(src, true)}"`);
+  const md = md0.replace(/src="([^"]+)"/g, (_, src) => `src="${resolve(src, true)}"`);
   const body = marked.parse(md) as string;
   const title = md.match(/^# (.+)$/m)?.[1] ?? "Docs";
   const nav = NAV.map(([label, target]) => {
