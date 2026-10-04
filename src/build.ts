@@ -41,7 +41,7 @@ for (const w of [400, 500, 600, 700, 800]) copyFileSync(path.join(fontsDir, `int
 // ── Landing page ────────────────────────────────────────────────────────
 
 // The package's own examples, so they always match the installed version's language.
-const EXAMPLES = ["sign-in", "dashboard", "checkout", "states"];
+const EXAMPLES = ["sign-in", "dashboard", "checkout", "sign-up-flow", "states"];
 const examples = EXAMPLES
   .map((name) => {
     const f = `${name}.tsq`;
