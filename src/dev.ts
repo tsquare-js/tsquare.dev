@@ -6,11 +6,12 @@
  *   npm run dev            → http://localhost:3000
  *   PORT=4000 npm run dev
  */
-import { createServer } from "node:http";
+import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import image from "../api/image.js";
 import playground from "../api/playground.js";
+import { handleMcp } from "../api/mcp.js";
 
 const PORT = Number(process.env.PORT ?? 3000);
 const PUBLIC = path.resolve("public");
@@ -35,6 +36,19 @@ async function staticFile(urlPath: string) {
   return null;
 }
 
+/** Node request → web Request → handler → Node response, for the fetch-style functions (api/mcp.ts). */
+async function viaFetch(req: IncomingMessage, res: ServerResponse, handle: (r: Request) => Promise<Response>) {
+  const chunks: Buffer[] = [];
+  for await (const c of req) chunks.push(c as Buffer);
+  const headers = new Headers();
+  for (const [k, v] of Object.entries(req.headers)) if (v != null) headers.set(k, Array.isArray(v) ? v.join(", ") : v);
+  const body = req.method === "GET" || req.method === "HEAD" ? undefined : Buffer.concat(chunks);
+  const response = await handle(new Request(`http://localhost:${PORT}${req.url}`, { method: req.method, headers, body }));
+  res.writeHead(response.status, Object.fromEntries(response.headers));
+  if (response.body) for await (const chunk of response.body) res.write(chunk);
+  res.end();
+}
+
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url ?? "/", "http://localhost");
@@ -46,6 +60,7 @@ createServer(async (req, res) => {
       req.url = url.pathname + url.search;
       return await image(req, res);
     }
+    if (url.pathname === "/mcp") return await viaFetch(req, res, handleMcp);
     const api = url.pathname.match(/^\/api\/(reference|examples|prompt|render|png|language)$/);
     if (api) {
       url.searchParams.set("route", url.pathname);

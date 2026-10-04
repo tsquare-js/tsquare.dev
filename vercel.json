@@ -14,6 +14,10 @@
       "destination": "https://us.i.posthog.com/:path*"
     },
     {
+      "source": "/mcp",
+      "destination": "/api/mcp"
+    },
+    {
       "source": "/svg/:data",
       "destination": "/api/image?fmt=svg&data=:data"
     },
