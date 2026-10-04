@@ -148,6 +148,15 @@ function asWireframe(snippet: string) {
   return indent === 0 ? snippet : indent === 2 ? `board\n${snippet}` : `board\n  screen phone\n${snippet}`;
 }
 
+/** Text color for a hex background: white when it reads at 4.5:1, otherwise dark (the site's navy). */
+function inkOn(hex: string) {
+  const lum = (h: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+  return 1.05 / (lum(hex) + 0.05) >= 4.5 ? "#ffffff" : "#032d7b";
+}
+
 function renderDoc(rel: string) {
   const dir = path.posix.dirname(rel);
   const url = pageUrl(rel);
@@ -172,6 +181,11 @@ function renderDoc(rel: string) {
       },
       image({ href, text }) {
         return `<img src="${escapeHtml(resolve(href, true))}" alt="${escapeHtml(text)}" loading="lazy">`;
+      },
+      // Inline code that is exactly a hex color (`#2563eb`) shows on that color, so the Colors page shows its colors.
+      codespan({ text }) {
+        const hex = /^#[0-9a-f]{6}$/i.test(text) ? text.toLowerCase() : null;
+        return hex ? `<code class="hex" style="background:${hex};color:${inkOn(hex)}">${hex}</code>` : false; // false: marked's own (escaping) renderer
       },
       // Every code block gets Copy; tsquare blocks also open in the playground (a share link made here).
       code({ text, lang }) {
