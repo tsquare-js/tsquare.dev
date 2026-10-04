@@ -28,7 +28,7 @@
 </div></header>
 <div class="page"><article>
   <h1>Privacy</h1>
-  <p class="updated">Last updated October 3, 2026</p>
+  <p class="updated">Last updated October 4, 2026</p>
 
   <div class="short">
     <ul>
@@ -47,6 +47,9 @@
   <h2>When you use the playground</h2>
   <p>To draw the picture, the playground sends your wireframe text to our server, which renders it and sends the image back. The text is handled in memory and not saved.</p>
   <p>The playground remembers your current wireframe and your light or dark theme in your own browser (local storage), so they're still there when you come back. It never leaves your device that way, and clearing this site's data removes it.</p>
+
+  <h2>When you use the MCP server</h2>
+  <p>If you connect an AI tool to <code>tsquare.dev/mcp</code>, the tool sends the wireframes its model writes to our server, which checks and renders them and sends back the image or the problems. As in the playground, the text is handled in memory, not saved, and never written to our logs. Vercel's standard request logs record that a request was made (as above), not its content. The links the server returns are image and share links, described next. What your AI tool keeps is up to that tool and its provider.</p>
 
   <h2>Image and share links</h2>
   <p>An image link such as <code>tsquare.dev/svg/…</code> or <code>tsquare.dev/png/…</code> carries the wireframe inside the link itself. The text is compressed to keep the link short, <strong>not encrypted</strong>: anyone with the link can turn it back into the text.</p>
