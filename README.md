@@ -10,7 +10,7 @@ The language, the renderer, the playground and the docs' Markdown live in the [t
 |---|---|
 | `/` | landing page (`src/landing.html`), with the installed `tsquare` package's examples rendered live |
 | `/playground` | the playground page shipped in the `tsquare` package |
-| `/docs/…` | the tsquare repo's `docs/`, as HTML |
+| `/docs/…` | the tsquare repo's `docs/`, as HTML, plus the site's own pages in `src/docs/` (other tsquare products, like the VS Code extension, which don't wait for a tsquare release) |
 | `/svg/<data>`, `/png/<data>?scale=2` | render URLs (`api/image.ts`) |
 | `/api/reference`, `/api/render`, … | the playground's endpoints (`api/playground.ts`, the package's handler) |
 

@@ -3,7 +3,8 @@
  *   index.html          landing page, with the installed package's examples as render URLs
  *   playground.html     the playground page and its script from the installed tsquare package
  *   docs/**             the library repo's docs/, as HTML, at the commit npm
- *                       recorded for the installed tsquare version
+ *                       recorded for the installed tsquare version, plus the site's
+ *                       own pages from src/docs/ (other tsquare products, e.g. VS Code)
  *
  *   npm run build                         fetch the docs from GitHub
  *   DOCS_DIR=../wireframe npm run build   use a local checkout of the library instead
@@ -137,7 +138,14 @@ const NAV = [
   ["Colors", "colors.md"],
   ["Embedding", "embedding.md"],
   ["Using it with AI", "ai.md"],
+  ["VS Code", "vscode.md"],
 ];
+
+/**
+ * Pages the site owns, merged into /docs: they're about other tsquare products (the VS Code
+ * extension), not the library, so they go live with the site instead of waiting for a tsquare release.
+ */
+const SITE_DOCS = "src/docs";
 
 /**
  * A docs snippet as a whole wireframe, for its playground link. Fragments are indented as they'd
@@ -157,7 +165,7 @@ function inkOn(hex: string) {
   return 1.05 / (lum(hex) + 0.05) >= 4.5 ? "#ffffff" : "#032d7b";
 }
 
-function renderDoc(rel: string) {
+function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/docs/${rel}`) {
   const dir = path.posix.dirname(rel);
   const url = pageUrl(rel);
   // Resolve relative links: other docs become site pages; anything outside docs/ links to GitHub.
@@ -172,7 +180,7 @@ function renderDoc(rel: string) {
   };
   // Colors page: color names show on their color too, per section (`blue` the accent is not `blue` the note).
   // Accents come from the page's own table rows (`blue` | `#2563eb`), note colors from the renderer's theme.
-  const md0 = readFileSync(path.join(docsIn, rel), "utf8");
+  const md0 = readFileSync(path.join(from, rel), "utf8");
   const namedColors: Record<string, Record<string, string>> =
     rel === "colors.md"
       ? { accent: Object.fromEntries([...md0.matchAll(/^\| `(\w+)` \| `(#[0-9a-f]{6})` \|$/gim)].map((m) => [m[1], m[2].toLowerCase()])), notes: { ...theme.notes } }
@@ -218,7 +226,7 @@ function renderDoc(rel: string) {
     .replaceAll("{{TITLE}}", escapeHtml(title.replace(/`/g, "")))
     .replace("{{NAV}}", nav)
     .replace("{{BODY}}", body)
-    .replace("{{SOURCE}}", `${REPO}/blob/${ref}/docs/${rel}`)
+    .replace("{{SOURCE}}", source)
     .replaceAll("{{VERSION}}", VERSION);
 }
 
@@ -240,5 +248,16 @@ for (const rel of walk("")) {
   }
 }
 if (!existsSync(path.join(OUT, "docs/index.html"))) throw new Error("docs/README.md missing from the docs source");
+for (const rel of readdirSync(SITE_DOCS).filter((f) => f.endsWith(".md"))) {
+  const out = path.join(OUT, pageUrl(rel).slice(1) + ".html");
+  // The library's page for this route may be a file (vscode.md → vscode.html) or a folder (vscode/README.md → vscode/index.html).
+  if (existsSync(out) || existsSync(path.join(OUT, pageUrl(rel).slice(1), "index.html")))
+    throw new Error(`${SITE_DOCS}/${rel} and a library docs page are both ${pageUrl(rel)}; rename one`);
+  writeFileSync(out, renderDoc(rel, SITE_DOCS, `https://github.com/tsquare-js/tsquare.dev/blob/main/${SITE_DOCS}/${rel}`));
+  pages++;
+}
+for (const [label, target] of NAV) {
+  if (!existsSync(path.join(OUT, pageUrl(target).slice(1) + (target.endsWith("README.md") ? "/index.html" : ".html")))) throw new Error(`docs nav: "${label}" → ${target} has no page`);
+}
 
 console.log(`built ${OUT}/: landing (${examples.length} examples), playground, ${pages} docs pages (tsquare ${VERSION}, docs at ${ref.slice(0, 7)})`);

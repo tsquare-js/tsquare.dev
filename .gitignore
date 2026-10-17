@@ -16,6 +16,7 @@
 !/src/*.css
 !/src/*.js
 !/src/*.tsq
+!/src/docs/*.md
 !/examples/*.tsq
 !/assets/*.png
 !/assets/*.svg
