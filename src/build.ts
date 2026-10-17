@@ -250,7 +250,9 @@ for (const rel of walk("")) {
 if (!existsSync(path.join(OUT, "docs/index.html"))) throw new Error("docs/README.md missing from the docs source");
 for (const rel of readdirSync(SITE_DOCS).filter((f) => f.endsWith(".md"))) {
   const out = path.join(OUT, pageUrl(rel).slice(1) + ".html");
-  if (existsSync(out)) throw new Error(`${SITE_DOCS}/${rel} and the library's docs/${rel} are both ${pageUrl(rel)}; rename one`);
+  // The library's page for this route may be a file (vscode.md → vscode.html) or a folder (vscode/README.md → vscode/index.html).
+  if (existsSync(out) || existsSync(path.join(OUT, pageUrl(rel).slice(1), "index.html")))
+    throw new Error(`${SITE_DOCS}/${rel} and a library docs page are both ${pageUrl(rel)}; rename one`);
   writeFileSync(out, renderDoc(rel, SITE_DOCS, `https://github.com/tsquare-js/tsquare.dev/blob/main/${SITE_DOCS}/${rel}`));
   pages++;
 }
