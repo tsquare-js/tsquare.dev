@@ -140,12 +140,13 @@ const NAV = [
   ["Using it with AI", "ai.md"],
   ["VS Code", "vscode.md"],
   ["Obsidian", "obsidian.md"],
+  ["React", "react.md"],
 ];
 
 /**
  * Pages the site owns, merged into /docs: they're about other tsquare products (the VS Code
- * extension, the Obsidian plugin), not the library, so they go live with the site instead of
- * waiting for a tsquare release.
+ * extension, the Obsidian plugin, the React package), not the library, so they go live with the
+ * site instead of waiting for a tsquare release.
  */
 const SITE_DOCS = "src/docs";
 
