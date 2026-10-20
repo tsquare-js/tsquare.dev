@@ -9,12 +9,13 @@
 <link rel="stylesheet" href="/site.css">
 <style>
   .layout { max-width: 1160px; margin: 0 auto; padding: 32px 20px 0; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 40px; }
-  .side { position: sticky; top: 84px; align-self: start; display: flex; flex-direction: column; gap: 2px; }
+  .side { position: sticky; top: 84px; align-self: start; display: flex; flex-direction: column; gap: 2px; max-height: calc(100vh - 100px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
   .side .label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px 10px; }
   .side a { color: var(--navy); text-decoration: none; padding: 7px 10px; border-radius: 8px; font-weight: 550; font-size: 15px; }
   .side a:hover { background: var(--mist); }
   .side a[aria-current="page"] { background: var(--sky); }
   .side a.sub { padding: 5px 10px 5px 22px; font-size: 14px; font-weight: 500; }
+  .side .sub-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 10px 0 2px 22px; }
   article { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); padding: 36px 44px; min-width: 0; }
   article h1 { color: var(--navy); font-size: 34px; letter-spacing: -0.02em; margin: 0 0 16px; line-height: 1.15; }
   article h2 { color: var(--navy); font-size: 23px; margin: 36px 0 12px; letter-spacing: -0.01em; }
@@ -45,7 +46,10 @@
     .layout { grid-template-columns: 1fr; gap: 16px; padding-top: 16px; }
     .side { position: static; flex-direction: row; flex-wrap: wrap; }
     .side .label { display: none; }
+    .side { max-height: none; overflow: visible; }
     .side a.sub { padding-left: 10px; }
+    /* the component list would push the page far down: phones use the Components page and previous/next */
+    .side a.comp, .side .sub-label { display: none; }
     .pager { flex-direction: column; }
     .pager a { flex-basis: auto; }
     .pager a.next { margin-left: 0; }
@@ -97,6 +101,10 @@ document.addEventListener("click", async (e) => {
   }
   setTimeout(() => (button.textContent = "Copy"), 1500);
 });
+// A long side nav (the component list) scrolls on its own: start with the current page in view
+const side = document.querySelector(".side");
+const current = side && side.querySelector('a.sub[aria-current="page"]');
+if (current && side.scrollHeight > side.clientHeight) side.scrollTop = current.offsetTop - side.clientHeight / 2;
 </script>
 <script src="/console.js" defer></script>
 <script src="/analytics.js" defer></script>
