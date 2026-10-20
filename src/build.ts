@@ -140,15 +140,37 @@ const NAV = [
   ["Using it with AI", "ai.md"],
   ["VS Code", "vscode.md"],
   ["Obsidian", "obsidian.md"],
-  ["React", "react.md"],
+  ["React", "react/README.md"],
 ];
 
 /**
  * Pages the site owns, merged into /docs: they're about other tsquare products (the VS Code
- * extension, the Obsidian plugin, the React package), not the library, so they go live with the
- * site instead of waiting for a tsquare release.
+ * extension, the Obsidian plugin), not the library, so they go live with the site instead of
+ * waiting for a tsquare release.
  */
 const SITE_DOCS = "src/docs";
+
+/**
+ * The React package's docs (@tsquare-js/react, pinned in package.json): its docs/ folder becomes
+ * /docs/react (README.md) and /docs/react/<page>. They're copied into a react/ folder so links
+ * between them resolve like the library's. The section's pages are listed under "React" in the
+ * nav in the order docs/README.md links to them after its intro (pages it doesn't link come last,
+ * alphabetically), titled by their headings, so a new page in the package shows up without a
+ * site change.
+ */
+const REACT_PKG = "node_modules/@tsquare-js/react";
+const REACT_VERSION: string = JSON.parse(readFileSync(path.join(REACT_PKG, "package.json"), "utf8")).version;
+const reactDocs = mkdtempSync(path.join(tmpdir(), "tsquare-react-docs-"));
+mkdirSync(path.join(reactDocs, "react"));
+const reactFiles = readdirSync(path.join(REACT_PKG, "docs")).filter((f) => f.endsWith(".md"));
+for (const f of reactFiles) copyFileSync(path.join(REACT_PKG, "docs", f), path.join(reactDocs, "react", f));
+const reactTitle = (f: string) => readFileSync(path.join(reactDocs, "react", f), "utf8").match(/^# (.+)$/m)![1].replace(/`/g, "");
+// after the intro (which may mention a page in passing), from the first "## " section on
+const reactReadme = readFileSync(path.join(reactDocs, "react", "README.md"), "utf8");
+const reactOrder = [...reactReadme.slice(reactReadme.indexOf("\n## ")).matchAll(/\]\(([\w-]+\.md)/g)].map((m) => m[1]);
+const REACT_NAV = [...new Set([...reactOrder, ...reactFiles.sort()])]
+  .filter((f) => f !== "README.md" && reactFiles.includes(f))
+  .map((f) => [reactTitle(f), `react/${f}`] as const);
 
 /**
  * A docs snippet as a whole wireframe, for its playground link. Fragments are indented as they'd
@@ -168,7 +190,7 @@ function inkOn(hex: string) {
   return 1.05 / (lum(hex) + 0.05) >= 4.5 ? "#ffffff" : "#032d7b";
 }
 
-function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/docs/${rel}`) {
+function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/docs/${rel}`, extra: { pager?: string; edition?: string } = {}) {
   const dir = path.posix.dirname(rel);
   const url = pageUrl(rel);
   // Resolve relative links: other docs become site pages; anything outside docs/ links to GitHub.
@@ -222,15 +244,27 @@ function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/doc
   const title = md.match(/^# (.+)$/m)?.[1] ?? "Docs";
   const nav = NAV.map(([label, target]) => {
     const href = pageUrl(target);
-    const current = url === href || (href === "/docs/components" && url.startsWith("/docs/components"));
-    return `<a href="${href}"${current ? ' aria-current="page"' : ""}>${label}</a>`;
+    const section = (href === "/docs/components" || href === "/docs/react") && url.startsWith(href + "/");
+    const link = `<a href="${href}"${url === href || (section && href === "/docs/components") ? ' aria-current="page"' : ""}>${label}</a>`;
+    // Inside the React section, its pages are listed under it
+    if (href !== "/docs/react" || !(url === href || section)) return link;
+    return link + REACT_NAV.map(([sub, t]) => `<a class="sub" href="${pageUrl(t)}"${url === pageUrl(t) ? ' aria-current="page"' : ""}>${escapeHtml(sub)}</a>`).join("");
   }).join("");
   return readFileSync("src/docs.html", "utf8")
     .replaceAll("{{TITLE}}", escapeHtml(title.replace(/`/g, "")))
     .replace("{{NAV}}", nav)
     .replace("{{BODY}}", body)
+    .replace("{{PAGER}}", extra.pager ?? "")
+    .replace("{{EDITION}}", escapeHtml(extra.edition ?? `tsquare ${VERSION}`))
     .replace("{{SOURCE}}", source)
     .replaceAll("{{VERSION}}", VERSION);
+}
+
+/** Previous / next links at the bottom of a page in a section with its own page order (the React docs). */
+function pager(prev?: readonly [string, string], next?: readonly [string, string]) {
+  const link = (kind: "prev" | "next", [label, target]: readonly [string, string]) =>
+    `<a class="${kind}" href="${pageUrl(target)}"><span>${kind === "prev" ? "Previous" : "Next"}</span>${escapeHtml(label)}</a>`;
+  return prev || next ? `<nav class="pager" aria-label="More in this section">${prev ? link("prev", prev) : ""}${next ? link("next", next) : ""}</nav>` : "";
 }
 
 const walk = (dir: string): string[] =>
@@ -259,8 +293,22 @@ for (const rel of readdirSync(SITE_DOCS).filter((f) => f.endsWith(".md"))) {
   writeFileSync(out, renderDoc(rel, SITE_DOCS, `https://github.com/tsquare-js/tsquare.dev/blob/main/${SITE_DOCS}/${rel}`));
   pages++;
 }
+if (existsSync(path.join(OUT, "docs/react"))) throw new Error("the library's docs have a react/ folder, and so does @tsquare-js/react; rename one");
+// The section's reading order: the overview, then its pages as the nav lists them
+const reactPages = [["React", "react/README.md"] as const, ...REACT_NAV];
+for (const f of reactFiles) {
+  const rel = `react/${f}`;
+  const out = path.join(OUT, pageUrl(rel).slice(1) + (f === "README.md" ? "/index.html" : ".html"));
+  const i = reactPages.findIndex(([, target]) => target === rel);
+  mkdirSync(path.dirname(out), { recursive: true });
+  writeFileSync(out, renderDoc(rel, reactDocs, `https://github.com/tsquare-js/react/blob/v${REACT_VERSION}/docs/${f}`, {
+    pager: pager(reactPages[i - 1], reactPages[i + 1]),
+    edition: `@tsquare-js/react ${REACT_VERSION}`,
+  }));
+  pages++;
+}
 for (const [label, target] of NAV) {
   if (!existsSync(path.join(OUT, pageUrl(target).slice(1) + (target.endsWith("README.md") ? "/index.html" : ".html")))) throw new Error(`docs nav: "${label}" → ${target} has no page`);
 }
 
-console.log(`built ${OUT}/: landing (${examples.length} examples), playground, ${pages} docs pages (tsquare ${VERSION}, docs at ${ref.slice(0, 7)})`);
+console.log(`built ${OUT}/: landing (${examples.length} examples), playground, ${pages} docs pages (tsquare ${VERSION}, docs at ${ref.slice(0, 7)}; @tsquare-js/react ${REACT_VERSION})`);
