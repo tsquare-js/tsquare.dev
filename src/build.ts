@@ -150,13 +150,38 @@ const NAV = [
  */
 const SITE_DOCS = "src/docs";
 
+type Page = readonly [label: string, rel: string];
+
+/**
+ * A docs section's reading order (a folder with a README.md overview and pages): the overview,
+ * then the pages in the order the overview links to them after its intro (the intro may mention
+ * a page in passing), then any it doesn't link, alphabetically. Pages are titled by their
+ * headings, so pages added to a section show up without a site change. Used for the nav's
+ * sub-pages and the previous/next links.
+ */
+function sectionPages(from: string, section: string, label: string): Page[] {
+  const dir = path.join(from, section);
+  const files = readdirSync(dir).filter((f) => f.endsWith(".md"));
+  const readme = readFileSync(path.join(dir, "README.md"), "utf8");
+  const linked = [...readme.slice(readme.indexOf("\n## ")).matchAll(/\]\(([\w-]+\.md)/g)].map((m) => m[1]);
+  const title = (f: string) => readFileSync(path.join(dir, f), "utf8").match(/^# (.+)$/m)![1].replace(/`/g, "");
+  const pages = [...new Set([...linked, ...files.sort()])].filter((f) => f !== "README.md" && files.includes(f));
+  return [[label, `${section}/README.md`], ...pages.map((f): Page => [title(f), `${section}/${f}`])];
+}
+
+/** Previous / next links for a page in a section's reading order. */
+function pagerFor(pages: Page[], rel: string) {
+  const i = pages.findIndex(([, target]) => target === rel);
+  return i < 0 ? "" : pager(pages[i - 1], pages[i + 1]);
+}
+
+const COMPONENT_PAGES = sectionPages(docsIn, "components", "Components");
+
 /**
  * The React package's docs (@tsquare-js/react, pinned in package.json): its docs/ folder becomes
  * /docs/react (README.md) and /docs/react/<page>. They're copied into a react/ folder so links
- * between them resolve like the library's. The section's pages are listed under "React" in the
- * nav in the order docs/README.md links to them after its intro (pages it doesn't link come last,
- * alphabetically), titled by their headings, so a new page in the package shows up without a
- * site change.
+ * between them resolve like the library's. Inside the section, its pages are listed under
+ * "React" in the nav.
  */
 const REACT_PKG = "node_modules/@tsquare-js/react";
 const REACT_VERSION: string = JSON.parse(readFileSync(path.join(REACT_PKG, "package.json"), "utf8")).version;
@@ -164,13 +189,8 @@ const reactDocs = mkdtempSync(path.join(tmpdir(), "tsquare-react-docs-"));
 mkdirSync(path.join(reactDocs, "react"));
 const reactFiles = readdirSync(path.join(REACT_PKG, "docs")).filter((f) => f.endsWith(".md"));
 for (const f of reactFiles) copyFileSync(path.join(REACT_PKG, "docs", f), path.join(reactDocs, "react", f));
-const reactTitle = (f: string) => readFileSync(path.join(reactDocs, "react", f), "utf8").match(/^# (.+)$/m)![1].replace(/`/g, "");
-// after the intro (which may mention a page in passing), from the first "## " section on
-const reactReadme = readFileSync(path.join(reactDocs, "react", "README.md"), "utf8");
-const reactOrder = [...reactReadme.slice(reactReadme.indexOf("\n## ")).matchAll(/\]\(([\w-]+\.md)/g)].map((m) => m[1]);
-const REACT_NAV = [...new Set([...reactOrder, ...reactFiles.sort()])]
-  .filter((f) => f !== "README.md" && reactFiles.includes(f))
-  .map((f) => [reactTitle(f), `react/${f}`] as const);
+const REACT_PAGES = sectionPages(reactDocs, "react", "React");
+const REACT_NAV = REACT_PAGES.slice(1);
 
 /**
  * A docs snippet as a whole wireframe, for its playground link. Fragments are indented as they'd
@@ -260,7 +280,7 @@ function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/doc
     .replaceAll("{{VERSION}}", VERSION);
 }
 
-/** Previous / next links at the bottom of a page in a section with its own page order (the React docs). */
+/** Previous / next links at the bottom of a page in a section (Components, React): see sectionPages. */
 function pager(prev?: readonly [string, string], next?: readonly [string, string]) {
   const link = (kind: "prev" | "next", [label, target]: readonly [string, string]) =>
     `<a class="${kind}" href="${pageUrl(target)}"><span>${kind === "prev" ? "Previous" : "Next"}</span>${escapeHtml(label)}</a>`;
@@ -277,7 +297,8 @@ for (const rel of walk("")) {
   if (rel.endsWith(".md")) {
     const out = path.join(OUT, pageUrl(rel).slice(1) + (rel.endsWith("README.md") ? "/index.html" : ".html"));
     mkdirSync(path.dirname(out), { recursive: true });
-    writeFileSync(out, renderDoc(rel));
+    // the component pages get previous/next links, in the order the Components page lists them
+    writeFileSync(out, renderDoc(rel, docsIn, undefined, { pager: rel.startsWith("components/") ? pagerFor(COMPONENT_PAGES, rel) : undefined }));
     pages++;
   } else if (rel.endsWith(".png")) {
     mkdirSync(path.join(OUT, "docs", path.dirname(rel)), { recursive: true });
@@ -294,15 +315,12 @@ for (const rel of readdirSync(SITE_DOCS).filter((f) => f.endsWith(".md"))) {
   pages++;
 }
 if (existsSync(path.join(OUT, "docs/react"))) throw new Error("the library's docs have a react/ folder, and so does @tsquare-js/react; rename one");
-// The section's reading order: the overview, then its pages as the nav lists them
-const reactPages = [["React", "react/README.md"] as const, ...REACT_NAV];
 for (const f of reactFiles) {
   const rel = `react/${f}`;
   const out = path.join(OUT, pageUrl(rel).slice(1) + (f === "README.md" ? "/index.html" : ".html"));
-  const i = reactPages.findIndex(([, target]) => target === rel);
   mkdirSync(path.dirname(out), { recursive: true });
   writeFileSync(out, renderDoc(rel, reactDocs, `https://github.com/tsquare-js/react/blob/v${REACT_VERSION}/docs/${f}`, {
-    pager: pager(reactPages[i - 1], reactPages[i + 1]),
+    pager: pagerFor(REACT_PAGES, rel),
     edition: `@tsquare-js/react ${REACT_VERSION}`,
   }));
   pages++;
