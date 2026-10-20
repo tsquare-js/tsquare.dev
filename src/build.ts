@@ -190,7 +190,7 @@ function inkOn(hex: string) {
   return 1.05 / (lum(hex) + 0.05) >= 4.5 ? "#ffffff" : "#032d7b";
 }
 
-function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/docs/${rel}`) {
+function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/docs/${rel}`, extra: { pager?: string; edition?: string } = {}) {
   const dir = path.posix.dirname(rel);
   const url = pageUrl(rel);
   // Resolve relative links: other docs become site pages; anything outside docs/ links to GitHub.
@@ -254,8 +254,17 @@ function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/doc
     .replaceAll("{{TITLE}}", escapeHtml(title.replace(/`/g, "")))
     .replace("{{NAV}}", nav)
     .replace("{{BODY}}", body)
+    .replace("{{PAGER}}", extra.pager ?? "")
+    .replace("{{EDITION}}", escapeHtml(extra.edition ?? `tsquare ${VERSION}`))
     .replace("{{SOURCE}}", source)
     .replaceAll("{{VERSION}}", VERSION);
+}
+
+/** Previous / next links at the bottom of a page in a section with its own page order (the React docs). */
+function pager(prev?: readonly [string, string], next?: readonly [string, string]) {
+  const link = (kind: "prev" | "next", [label, target]: readonly [string, string]) =>
+    `<a class="${kind}" href="${pageUrl(target)}"><span>${kind === "prev" ? "Previous" : "Next"}</span>${escapeHtml(label)}</a>`;
+  return prev || next ? `<nav class="pager" aria-label="More in this section">${prev ? link("prev", prev) : ""}${next ? link("next", next) : ""}</nav>` : "";
 }
 
 const walk = (dir: string): string[] =>
@@ -285,11 +294,17 @@ for (const rel of readdirSync(SITE_DOCS).filter((f) => f.endsWith(".md"))) {
   pages++;
 }
 if (existsSync(path.join(OUT, "docs/react"))) throw new Error("the library's docs have a react/ folder, and so does @tsquare-js/react; rename one");
+// The section's reading order: the overview, then its pages as the nav lists them
+const reactPages = [["React", "react/README.md"] as const, ...REACT_NAV];
 for (const f of reactFiles) {
   const rel = `react/${f}`;
   const out = path.join(OUT, pageUrl(rel).slice(1) + (f === "README.md" ? "/index.html" : ".html"));
+  const i = reactPages.findIndex(([, target]) => target === rel);
   mkdirSync(path.dirname(out), { recursive: true });
-  writeFileSync(out, renderDoc(rel, reactDocs, `https://github.com/tsquare-js/react/blob/v${REACT_VERSION}/docs/${f}`));
+  writeFileSync(out, renderDoc(rel, reactDocs, `https://github.com/tsquare-js/react/blob/v${REACT_VERSION}/docs/${f}`, {
+    pager: pager(reactPages[i - 1], reactPages[i + 1]),
+    edition: `@tsquare-js/react ${REACT_VERSION}`,
+  }));
   pages++;
 }
 for (const [label, target] of NAV) {
