@@ -177,6 +177,16 @@ function pagerFor(pages: Page[], rel: string) {
 
 const COMPONENT_PAGES = sectionPages(docsIn, "components", "Components");
 
+/** A section's groups for the nav: each "## " heading on its overview, with the pages listed under it. */
+function sectionGroups(from: string, section: string, pages: Page[]) {
+  const readme = readFileSync(path.join(from, section, "README.md"), "utf8");
+  return readme.split(/\n## /).slice(1).map((chunk) => ({
+    group: chunk.slice(0, chunk.indexOf("\n")).trim(),
+    pages: [...chunk.matchAll(/\]\(([\w-]+\.md)/g)].map((m) => pages.find(([, t]) => t === `${section}/${m[1]}`)).filter((p): p is Page => !!p),
+  })).filter((g) => g.pages.length);
+}
+const COMPONENT_GROUPS = sectionGroups(docsIn, "components", COMPONENT_PAGES);
+
 /**
  * The React package's docs (@tsquare-js/react, pinned in package.json): its docs/ folder becomes
  * /docs/react (README.md) and /docs/react/<page>. They're copied into a react/ folder so links
@@ -262,13 +272,17 @@ function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/doc
   const md = md0.replace(/src="([^"]+)"/g, (_, src) => `src="${resolve(src, true)}"`);
   const body = marked.parse(md) as string;
   const title = md.match(/^# (.+)$/m)?.[1] ?? "Docs";
+  const subLinks = (pages: readonly Page[], cls: string) =>
+    pages.map(([sub, t]) => `<a class="${cls}" href="${pageUrl(t)}"${url === pageUrl(t) ? ' aria-current="page"' : ""}>${escapeHtml(sub)}</a>`).join("");
   const nav = NAV.map(([label, target]) => {
     const href = pageUrl(target);
-    const section = (href === "/docs/components" || href === "/docs/react") && url.startsWith(href + "/");
-    const link = `<a href="${href}"${url === href || (section && href === "/docs/components") ? ' aria-current="page"' : ""}>${label}</a>`;
-    // Inside the React section, its pages are listed under it
-    if (href !== "/docs/react" || !(url === href || section)) return link;
-    return link + REACT_NAV.map(([sub, t]) => `<a class="sub" href="${pageUrl(t)}"${url === pageUrl(t) ? ' aria-current="page"' : ""}>${escapeHtml(sub)}</a>`).join("");
+    const link = `<a href="${href}"${url === href ? ' aria-current="page"' : ""}>${label}</a>`;
+    // Inside a section, its pages are listed under it: React's, and the components grouped as on the
+    // Components page (desktop only: on phones the nav wraps above the page, and 37 more would bury it)
+    if (url !== href && !url.startsWith(href + "/")) return link;
+    if (href === "/docs/react") return link + subLinks(REACT_NAV, "sub");
+    if (href === "/docs/components") return link + COMPONENT_GROUPS.map((g) => `<div class="sub-label">${escapeHtml(g.group)}</div>${subLinks(g.pages, "sub comp")}`).join("");
+    return link;
   }).join("");
   return readFileSync("src/docs.html", "utf8")
     .replaceAll("{{TITLE}}", escapeHtml(title.replace(/`/g, "")))
