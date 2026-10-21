@@ -259,7 +259,10 @@ function tick(now) {
 EXAMPLES.slice(1).forEach((ex) => { const p = new Image(); p.src = ex.src; });
 show(0);
 updateEdges();
-if (matchMedia("(prefers-reduced-motion: reduce)").matches) ring.closest("svg").style.display = "none";
+// No automatic rotation with reduced motion, or on touch screens: nothing pauses it under a finger
+// (hover does with a mouse), and it would move the page while someone reads (the picture's height
+// changes with each example). Tabs, arrows and swipe still switch.
+if (matchMedia("(prefers-reduced-motion: reduce), (hover: none)").matches) ring.closest("svg").style.display = "none";
 else requestAnimationFrame(tick);
 
 document.getElementById("copy").addEventListener("click", async (e) => {
