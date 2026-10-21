@@ -20,7 +20,7 @@
     "tsquare": "0.11.0"
   },
   "devDependencies": {
-    "@tsquare-js/react": "0.2.0",
+    "@tsquare-js/react": "0.3.0",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
