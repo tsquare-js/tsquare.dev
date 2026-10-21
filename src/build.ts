@@ -141,6 +141,7 @@ const NAV = [
   ["VS Code", "vscode.md"],
   ["Obsidian", "obsidian.md"],
   ["React", "react/README.md"],
+  ["Markdown plugins", "markdown-plugins.md"],
 ];
 
 /**
