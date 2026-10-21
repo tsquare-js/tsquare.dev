@@ -1,4 +1,4 @@
-# Docs sites
+# Markdown plugins
 
 Two plugins draw ```` ```tsquare ```` code blocks as wireframes when your docs site is built. Write a wireframe in a code block:
 
@@ -16,12 +16,16 @@ and the page shows the board as an image. It's drawn on the machine that builds 
 
 | Your site | Plugin |
 |---|---|
-| Docusaurus, Astro, MDX, anything on unified | [`remark-tsquare`](https://www.npmjs.com/package/remark-tsquare) |
-| VitePress, Eleventy, anything on markdown-it | [`markdown-it-tsquare`](https://www.npmjs.com/package/markdown-it-tsquare) |
+| Docusaurus, Astro, MDX, anything on unified | [`remark-tsquare`](#remark-tsquare) |
+| VitePress, Eleventy, anything on markdown-it | [`markdown-it-tsquare`](#markdown-it-tsquare) |
 
 Both make the same HTML and take the same options. They need Node 20 or newer. For a site without a build step, use [the script for any web page](embedding.md#pages-written-in-markdown) instead.
 
-## Docusaurus
+## remark-tsquare
+
+For sites built on [unified](https://unifiedjs.com) (remark), MDX included: [`remark-tsquare` on npm](https://www.npmjs.com/package/remark-tsquare).
+
+### Docusaurus
 
 ```bash
 npm install remark-tsquare
@@ -44,7 +48,7 @@ export default {
 
 That's all: `.md` and `.mdx` pages both work, and the [zoom viewer](#what-readers-get) comes with it.
 
-## Astro
+### Astro
 
 Astro 7 renders Markdown with Sätteri by default, which doesn't run remark plugins, so install Astro's remark processor too:
 
@@ -71,7 +75,11 @@ export default defineConfig({
 </script>
 ```
 
-## VitePress
+## markdown-it-tsquare
+
+For sites built on [markdown-it](https://github.com/markdown-it/markdown-it): [`markdown-it-tsquare` on npm](https://www.npmjs.com/package/markdown-it-tsquare). markdown-it renders synchronously, so the plugin draws boards in a worker thread the build waits for: about 0.3 s to start, then 15–90 ms a board.
+
+### VitePress
 
 ```bash
 npm install markdown-it-tsquare
@@ -98,7 +106,7 @@ import "markdown-it-tsquare/client";
 export default DefaultTheme;
 ```
 
-## Eleventy
+### Eleventy
 
 ```bash
 npm install markdown-it-tsquare
