@@ -137,6 +137,7 @@ const NAV = [
   ["Icons", "icons.md"],
   ["Colors", "colors.md"],
   ["Embedding", "embedding.md"],
+  ["Element positions", "element-positions.md"],
   ["Using it with AI", "ai.md"],
   ["VS Code", "vscode.md"],
   ["Obsidian", "obsidian.md"],
