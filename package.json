@@ -17,7 +17,7 @@
     "@modelcontextprotocol/server": "2.3.0",
     "@types/node": "^26.6.3",
     "marked": "18.0.14",
-    "tsquare": "0.12.1"
+    "tsquare": "0.13.0"
   },
   "devDependencies": {
     "@tsquare-js/react": "0.3.0",
