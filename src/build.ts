@@ -92,9 +92,23 @@ function describe(md: string, fallback: string) {
     }
     for (const t of sentences(blocks[i])) if (text.length < 90) text = text ? `${text} ${t}` : t;
   }
-  if (!text) return fallback;
+  return text ? clip(text) : fallback;
+}
+
+/** Cuts text to at most 160 characters at a word, ending in "…". */
+function clip(text: string) {
   if (text.length <= 160) return text;
   return text.slice(0, text.lastIndexOf(" ", 157)).replace(/[,;:]$/, "") + "…";
+}
+
+/**
+ * A component page's description. Its opening line comes from the catalog and is written for
+ * models ("Thin separator line."), too short to tell a search result what the page is.
+ */
+function describeComponent(name: string, md: string) {
+  const text = `The ${name} component in tsquare wireframes. ${describe(md, "").replace(new RegExp(`^${name}\\. `), "")}`;
+  const more = " Example, source and props.";
+  return clip(text.length + more.length <= 160 ? text + more : text);
 }
 
 /** Descriptions for pages whose opening lines aren't a summary of the page. */
@@ -396,11 +410,14 @@ function docInfo(rel: string, from: string) {
   const h1 = (md.match(/^# (.+)$/m)?.[1] ?? "Docs").replace(/`/g, "");
   const name = rel === "README.md" ? "Docs" : rel.startsWith("components/") && rel !== "components/README.md" ? `${h1} component` : h1;
   const title = rel === "react/README.md" ? "tsquare for React" : rel.startsWith("react/") ? `${h1} · tsquare for React` : `${name} · tsquare wireframes`;
-  return { h1, title, description: DESCRIPTIONS[rel] ?? describe(md, `${h1}: tsquare docs.`) };
+  const isComponent = rel.startsWith("components/") && rel !== "components/README.md";
+  const description = DESCRIPTIONS[rel] ?? (isComponent ? describeComponent(h1, md) : describe(md, `${h1}: tsquare docs.`));
+  // llms.txt lists the components under their own heading, where the catalog's line reads fine
+  return { h1, title, description, summary: isComponent ? describe(md, description) : description };
 }
 
 /** Every docs page, in the order written, for llms.txt. */
-const docsIndex: { rel: string; title: string; description: string }[] = [];
+const docsIndex: { rel: string; title: string; summary: string }[] = [];
 
 /**
  * The page as Markdown at its URL + ".md" (/docs/language.md), for AI agents and llms.txt.
@@ -419,8 +436,8 @@ function writeMarkdown(rel: string, from: string) {
       .replace(/src="([^"]+)"/g, (_, src: string) => `src="${abs(src, true)}"`))
     .join("");
   writeFileSync(path.join(OUT, pageUrl(rel).slice(1) + ".md"), md);
-  const { title, description } = docInfo(rel, from);
-  docsIndex.push({ rel, title, description });
+  const { title, summary } = docInfo(rel, from);
+  docsIndex.push({ rel, title, summary });
 }
 
 function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/docs/${rel}`, extra: { pager?: string; edition?: string } = {}) {
@@ -560,7 +577,7 @@ writeFileSync(
  * library's prompt, without its reply-only instructions) followed by every docs page.
  */
 {
-  const line = (d: (typeof docsIndex)[number]) => `- [${d.rel === "README.md" ? "Overview" : d.title.replace(/ · .*$/, "")}](${SITE}${pageUrl(d.rel)}.md): ${d.description}`;
+  const line = (d: (typeof docsIndex)[number]) => `- [${d.rel === "README.md" ? "Overview" : d.title.replace(/ · .*$/, "")}](${SITE}${pageUrl(d.rel)}.md): ${d.summary}`;
   const order = ["README.md", ...NAV.map(([, t]) => t)];
   const main = docsIndex.filter((d) => !d.rel.includes("/") || d.rel.endsWith("/README.md"))
     .sort((a, b) => (order.indexOf(a.rel) + 1 || 99) - (order.indexOf(b.rel) + 1 || 99));
