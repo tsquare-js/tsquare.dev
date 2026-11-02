@@ -4,10 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>tsquare: wireframes in plain text</title>
-<meta name="description" content="Wireframes in plain text: easy for LLMs to write, fast to render as SVG or PNG. Multi-screen boards with notes, ready for your docs.">
-<meta property="og:title" content="tsquare: wireframes in plain text">
-<meta property="og:description" content="Easy for LLMs to write, fast to render as SVG or PNG.">
-<meta property="og:image" content="https://tsquare.dev/logo.png">
+{{HEAD}}
 <link rel="icon" type="image/png" href="/mark.png">
 <link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="/site.css">
@@ -122,8 +119,8 @@
       </div>
     </div>
     <div class="viewer-body">
-      <pre><code id="source"></code></pre>
-      <div class="render"><img id="render" alt=""></div>
+      <pre><code id="source">{{FIRST_SOURCE}}</code></pre>
+      <div class="render"><img id="render" src="{{FIRST_SRC}}" alt="{{FIRST_ALT}}"></div>
     </div>
     <div class="viewer-caption">The image is rendered live from the text by this site's render URL. <a id="image-link" href="#" data-track="example_image_opened">Open the image</a> · <a href="/playground">Edit your own</a></div>
   </div>

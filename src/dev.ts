@@ -22,6 +22,10 @@ const TYPES: Record<string, string> = {
   ".svg": "image/svg+xml",
   ".js": "text/javascript; charset=utf-8",
   ".woff2": "font/woff2",
+  ".txt": "text/plain; charset=utf-8",
+  ".xml": "application/xml; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8",
+  ".ico": "image/x-icon",
 };
 
 /** cleanUrls: /docs/language → language.html, /docs → docs/index.html */
