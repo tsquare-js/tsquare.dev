@@ -5,6 +5,8 @@
  *   docs/**             the library repo's docs/, as HTML, at the commit npm
  *                       recorded for the installed tsquare version, plus the site's
  *                       own pages from src/docs/ (other tsquare products, e.g. VS Code)
+ *   docs/**.md          the same pages as Markdown, for AI agents
+ *   robots.txt, sitemap.xml, llms.txt, llms-full.txt, og.png (the social picture), favicon.ico
  *
  *   npm run build                         fetch the docs from GitHub
  *   DOCS_DIR=../wireframe npm run build   use a local checkout of the library instead
@@ -15,8 +17,9 @@ import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { Script } from "node:vm";
+import { Resvg } from "@resvg/resvg-js";
 import { Marked } from "marked";
-import { compileWireframe, encodeWireframe, formatIssues, theme } from "tsquare";
+import { compileWireframe, encodeWireframe, formatIssues, renderWireframeSvg, theme, wireframePrompt } from "tsquare";
 
 const require = createRequire(import.meta.url);
 const OUT = "public";
@@ -29,6 +32,78 @@ export const encode = encodeWireframe;
 
 const escapeHtml = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
+// ── Search and social tags ──────────────────────────────────────────────
+
+/** Canonical and social links always name the live site, also on preview deploys. */
+const SITE = "https://tsquare.dev";
+const SUMMARY = "Wireframes in plain text: easy for LLMs to write, fast to render as SVG or PNG. Multi-screen boards with notes, ready for your docs.";
+
+/** Every page's path, for sitemap.xml. */
+const sitemap: string[] = [];
+
+/** A page's description, canonical link and social tags, for its <head>. Also lists the page in the sitemap. */
+function head({ path: p, title, description, extra = "" }: { path: string; title: string; description: string; extra?: string }) {
+  sitemap.push(p);
+  const url = SITE + p;
+  return [
+    `<meta name="description" content="${escapeHtml(description)}">`,
+    `<link rel="canonical" href="${url}">`,
+    `<meta property="og:type" content="website">`,
+    `<meta property="og:site_name" content="tsquare">`,
+    `<meta property="og:title" content="${escapeHtml(title)}">`,
+    `<meta property="og:description" content="${escapeHtml(description)}">`,
+    `<meta property="og:url" content="${url}">`,
+    `<meta property="og:image" content="${SITE}/og.png">`,
+    `<meta property="og:image:width" content="1200">`,
+    `<meta property="og:image:height" content="630">`,
+    `<meta property="og:image:alt" content="${escapeHtml(OG_ALT)}">`,
+    `<meta name="twitter:card" content="summary_large_image">`,
+    extra,
+  ].filter(Boolean).join("\n");
+}
+
+/**
+ * A page's description: the opening sentences of its first paragraph of prose (and the next one
+ * if it's short), as plain text of at most ~160 characters. Skips a component page's breadcrumb
+ * line and sentences that only lead into a code block ("Save this as login.tsq:").
+ */
+function describe(md: string, fallback: string) {
+  const blocks = md
+    .slice(Math.max(0, md.search(/^# /m)))
+    .replace(/^# .+$/m, "")
+    .replace(/^(`{3,})[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, "\n\n```\n\n") // a code block ends the prose run
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const prose = (p = "") => !/^(<[a-z]|!\[|\||#|>|[-*] |\d+\. |```|`\w+` · )/.test(p);
+  const sentences = (p: string) => p
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/\*\*|`/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .split(/(?<=[.!?])\s+(?=[A-Z<@])/)
+    .filter((t) => !t.endsWith(":"));
+  let text = "";
+  for (let i = blocks.findIndex((p) => prose(p)); i >= 0 && i < blocks.length && text.length < 90; i++) {
+    if (!prose(blocks[i])) {
+      if (text) break;
+      continue;
+    }
+    for (const t of sentences(blocks[i])) if (text.length < 90) text = text ? `${text} ${t}` : t;
+  }
+  if (!text) return fallback;
+  if (text.length <= 160) return text;
+  return text.slice(0, text.lastIndexOf(" ", 157)).replace(/[,;:]$/, "") + "…";
+}
+
+/** Descriptions for pages whose opening lines aren't a summary of the page. */
+const DESCRIPTIONS: Record<string, string> = {
+  "getting-started.md": "Install tsquare, write your first wireframe as a .tsq file, check it and render it to PNG or SVG with the CLI, or try it in the playground.",
+  "react/styling.md": "Style the @tsquare-js/react components with the optional stylesheet: CSS variables for colors and sizes, light and dark themes, stable class names.",
+  "embedding.md": "Put tsquare wireframes in Notion, GitHub, docs sites and slides: image links from tsquare.dev, or SVG and PNG files you render yourself.",
+};
+
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 for (const f of ["logo.png", "mark.png"]) copyFileSync(path.join("assets", f), path.join(OUT, f));
@@ -38,6 +113,35 @@ copyFileSync("src/analytics.js", path.join(OUT, "analytics.js"));
 mkdirSync(path.join(OUT, "fonts"), { recursive: true });
 const fontsDir = path.join(path.dirname(require.resolve("@fontsource/inter/package.json")), "files");
 for (const w of [400, 500, 600, 700, 800]) copyFileSync(path.join(fontsDir, `inter-latin-${w}-normal.woff2`), path.join(OUT, "fonts", `inter-latin-${w}-normal.woff2`));
+
+// /favicon.ico, which browsers and crawlers ask for whatever the page links: the mark as an ICO
+// holding the PNG itself (one 256×256 image, which an ICO entry writes as 0×0).
+{
+  const png = readFileSync("assets/mark.png");
+  const ico = Buffer.alloc(22);
+  ico.writeUInt16LE(1, 2); // type: icon
+  ico.writeUInt16LE(1, 4); // one image
+  ico.writeUInt16LE(1, 10); // color planes
+  ico.writeUInt16LE(32, 12); // bits per pixel
+  ico.writeUInt32LE(png.length, 14);
+  ico.writeUInt32LE(22, 18); // the PNG starts after this header
+  writeFileSync(path.join(OUT, "favicon.ico"), Buffer.concat([ico, png]));
+}
+
+// /og.png, the picture social sites show for every page: the sign-up flow example on the logo's blue, 1200×630.
+const OG_ALT = "A tsquare wireframe board: three phone screens with flow arrows between them";
+{
+  const file = path.join(tsquareDir, "examples/sign-up-flow.tsq");
+  const { spec, issues } = compileWireframe(readFileSync(file, "utf8"));
+  if (!spec || issues.length) throw new Error(`examples/sign-up-flow.tsq:\n${formatIssues(issues)}`);
+  const board = await renderWireframeSvg(spec);
+  const [w, h] = board.match(/^<svg width="(\d+)" height="(\d+)"/)!.slice(1).map(Number);
+  const scale = Math.min(1104 / w, 550 / h);
+  const [bw, bh] = [w * scale, h * scale];
+  const placed = board.replace(/^<svg width="\d+" height="\d+"/, `<svg x="${(1200 - bw) / 2}" y="${(630 - bh) / 2}" width="${bw}" height="${bh}"`);
+  const og = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630"><rect width="1200" height="630" fill="#c6e7fd"/>${placed}</svg>`;
+  writeFileSync(path.join(OUT, "og.png"), new Resvg(og).render().asPng());
+}
 
 // ── Landing page ────────────────────────────────────────────────────────
 
@@ -55,14 +159,55 @@ const examples = EXAMPLES
     return { title, source, src: `/svg/${encode(source)}` };
   });
 
+/** What search engines read about the project as a whole (schema.org). */
+const softwareJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "tsquare",
+  description: SUMMARY,
+  url: SITE,
+  image: `${SITE}/og.png`,
+  applicationCategory: "DeveloperApplication",
+  operatingSystem: "Any",
+  softwareVersion: VERSION,
+  license: "https://opensource.org/licenses/MIT",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  sameAs: [
+    REPO,
+    "https://www.npmjs.com/package/tsquare",
+    "https://marketplace.visualstudio.com/items?itemName=tsquare-js.tsquare-vscode",
+    "https://community.obsidian.md/plugins/tsquare",
+  ],
+};
+
+// The first example is in the HTML itself (the script takes over from there), so the page has a
+// picture and its text without running any script.
 const landing = readFileSync("src/landing.html", "utf8")
+  .replace("{{HEAD}}", () => head({
+    path: "/",
+    title: "tsquare: wireframes in plain text",
+    description: SUMMARY,
+    extra: `<script type="application/ld+json">${JSON.stringify(softwareJsonLd).replace(/</g, "\\u003c")}</script>`,
+  }))
+  .replace("{{FIRST_SOURCE}}", () => escapeHtml(examples[0].source))
+  .replace("{{FIRST_SRC}}", () => examples[0].src)
+  .replace("{{FIRST_ALT}}", () => escapeHtml(`${examples[0].title} wireframe`))
   .replaceAll("{{VERSION}}", VERSION)
   .replace("{{EXAMPLES_JSON}}", JSON.stringify(examples).replace(/</g, "\\u003c"));
 writeFileSync(path.join(OUT, "index.html"), landing);
 
 // ── Privacy page ────────────────────────────────────────────────────────
 
-writeFileSync(path.join(OUT, "privacy.html"), readFileSync("src/privacy.html", "utf8").replaceAll("{{VERSION}}", VERSION));
+writeFileSync(
+  path.join(OUT, "privacy.html"),
+  readFileSync("src/privacy.html", "utf8")
+    .replace("{{HEAD}}", () => head({
+      path: "/privacy",
+      title: "Privacy · tsquare",
+      description: "What tsquare.dev collects when you visit the site, use the playground, the MCP server or image links, and what it doesn't.",
+    }))
+    .replaceAll("{{VERSION}}", VERSION),
+);
 
 // ── Console easter egg: the picture of src/console.tsq, then its source ─
 
@@ -91,7 +236,8 @@ writeFileSync(path.join(OUT, "privacy.html"), readFileSync("src/privacy.html", "
 const playgroundDir = path.join(tsquareDir, "dist/playground");
 const playground = readFileSync(path.join(playgroundDir, "index.html"), "utf8");
 const themeButton = '<button class="btn quiet icon-only" id="theme"';
-for (const marker of ["</head>", themeButton, "</body>"]) {
+const playgroundTitle = "<title>tsquare Playground</title>";
+for (const marker of [playgroundTitle, "</head>", themeButton, "</body>"]) {
   if (!playground.includes(marker)) throw new Error(`playground page has no ${marker}; update the playground section of src/build.ts`);
 }
 writeFileSync(
@@ -99,6 +245,11 @@ writeFileSync(
   playground
     // Share and image links point at whichever deploy serves the page (previews link to themselves),
     // and the logo goes home in the same tab.
+    .replace(playgroundTitle, () => `<title>Playground · tsquare wireframes</title>\n${head({
+      path: "/playground",
+      title: "Playground · tsquare wireframes",
+      description: "Write a wireframe in plain text and see it drawn as you type. Start from an example, then copy an image link, Markdown or a share link.",
+    })}`)
     .replace("</head>", `<script>window.TSQUARE_BASE = location.origin;</script></head>`)
     // The playground sends text to the server to render, so link the privacy page from it.
     .replace(themeButton, `<a href="/privacy" style="font-size:13px;color:var(--muted);text-decoration:none;margin-right:8px">Privacy</a>${themeButton}`)
@@ -127,7 +278,7 @@ const { root, ref } = await docsSource();
 const docsIn = path.join(root, "docs");
 
 /** docs/README.md → /docs, docs/language.md → /docs/language, docs/components/README.md → /docs/components */
-const pageUrl = (rel: string) => "/docs/" + rel.replace(/\.md$/, "").replace(/(^|\/)README$/, "").replace(/\/$/, "");
+const pageUrl = (rel: string) => ("/docs/" + rel.replace(/\.md$/, "").replace(/(^|\/)README$/, "")).replace(/\/$/, "");
 const slugify = (s: string) => s.toLowerCase().replace(/<[^>]+>/g, "").replace(/[^\w]+/g, "-").replace(/^-|-$/g, "");
 
 const NAV = [
@@ -222,19 +373,60 @@ function inkOn(hex: string) {
   return 1.05 / (lum(hex) + 0.05) >= 4.5 ? "#ffffff" : "#032d7b";
 }
 
+/**
+ * A relative link in a docs page (in folder `dir`): other docs become site pages (`page` gives
+ * their URL), anything outside docs/ links to GitHub.
+ */
+function resolveLink(dir: string, href: string, isImage: boolean, page = pageUrl) {
+  if (/^(https?:|mailto:|#|\/)/.test(href)) return href;
+  const [target, hash = ""] = href.split("#");
+  const resolved = path.posix.normalize(path.posix.join(dir, target));
+  if (resolved === "../assets/logo.png") return "/logo.png";
+  if (resolved.startsWith("../")) return `${REPO}/blob/${ref}/${resolved.slice(3)}${hash ? "#" + hash : ""}`;
+  if (!isImage && resolved.endsWith(".md")) return page(resolved) + (hash ? "#" + hash : "");
+  return "/docs/" + resolved;
+}
+
+/**
+ * A docs page's title for the browser tab and search results, and its description (its first
+ * paragraph). Titles say "wireframes": "tsquare" alone is also a drafting tool and a school's LMS.
+ */
+function docInfo(rel: string, from: string) {
+  const md = readFileSync(path.join(from, rel), "utf8");
+  const h1 = (md.match(/^# (.+)$/m)?.[1] ?? "Docs").replace(/`/g, "");
+  const name = rel === "README.md" ? "Docs" : rel.startsWith("components/") && rel !== "components/README.md" ? `${h1} component` : h1;
+  const title = rel === "react/README.md" ? "tsquare for React" : rel.startsWith("react/") ? `${h1} · tsquare for React` : `${name} · tsquare wireframes`;
+  return { h1, title, description: DESCRIPTIONS[rel] ?? describe(md, `${h1}: tsquare docs.`) };
+}
+
+/** Every docs page, in the order written, for llms.txt. */
+const docsIndex: { rel: string; title: string; description: string }[] = [];
+
+/**
+ * The page as Markdown at its URL + ".md" (/docs/language.md), for AI agents and llms.txt.
+ * Links point at the other pages' Markdown, as full URLs; code blocks are left as they are.
+ */
+function writeMarkdown(rel: string, from: string) {
+  const dir = path.posix.dirname(rel);
+  const abs = (href: string, isImage: boolean) => {
+    const r = resolveLink(dir, href, isImage, (t) => pageUrl(t) + ".md");
+    return r.startsWith("/") ? SITE + r : r;
+  };
+  const md = readFileSync(path.join(from, rel), "utf8")
+    .split(/(^```[\s\S]*?^```)/m)
+    .map((part, i) => i % 2 ? part : part
+      .replace(/(!?)\[([^\]]*)\]\(([^)\s]+)\)/g, (_, bang: string, text: string, href: string) => `${bang}[${text}](${abs(href, !!bang)})`)
+      .replace(/src="([^"]+)"/g, (_, src: string) => `src="${abs(src, true)}"`))
+    .join("");
+  writeFileSync(path.join(OUT, pageUrl(rel).slice(1) + ".md"), md);
+  const { title, description } = docInfo(rel, from);
+  docsIndex.push({ rel, title, description });
+}
+
 function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/docs/${rel}`, extra: { pager?: string; edition?: string } = {}) {
   const dir = path.posix.dirname(rel);
   const url = pageUrl(rel);
-  // Resolve relative links: other docs become site pages; anything outside docs/ links to GitHub.
-  const resolve = (href: string, isImage: boolean) => {
-    if (/^(https?:|mailto:|#|\/)/.test(href)) return href;
-    const [target, hash = ""] = href.split("#");
-    const resolved = path.posix.normalize(path.posix.join(dir, target));
-    if (resolved === "../assets/logo.png") return "/logo.png";
-    if (resolved.startsWith("../")) return `${REPO}/blob/${ref}/${resolved.slice(3)}${hash ? "#" + hash : ""}`;
-    if (!isImage && resolved.endsWith(".md")) return pageUrl(resolved) + (hash ? "#" + hash : "");
-    return "/docs/" + resolved;
-  };
+  const resolve = (href: string, isImage: boolean) => resolveLink(dir, href, isImage);
   // Colors page: color names show on their color too, per section (`blue` the accent is not `blue` the note).
   // Accents come from the page's own table rows (`blue` | `#2563eb`), note colors from the renderer's theme.
   const md0 = readFileSync(path.join(from, rel), "utf8");
@@ -273,7 +465,7 @@ function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/doc
   // Raw HTML in the docs (the centered logo) needs the same link rewriting.
   const md = md0.replace(/src="([^"]+)"/g, (_, src) => `src="${resolve(src, true)}"`);
   const body = marked.parse(md) as string;
-  const title = md.match(/^# (.+)$/m)?.[1] ?? "Docs";
+  const info = docInfo(rel, from);
   const subLinks = (pages: readonly Page[], cls: string) =>
     pages.map(([sub, t]) => `<a class="${cls}" href="${pageUrl(t)}"${url === pageUrl(t) ? ' aria-current="page"' : ""}>${escapeHtml(sub)}</a>`).join("");
   const nav = NAV.map(([label, target]) => {
@@ -287,7 +479,13 @@ function renderDoc(rel: string, from = docsIn, source = `${REPO}/blob/${ref}/doc
     return link;
   }).join("");
   return readFileSync("src/docs.html", "utf8")
-    .replaceAll("{{TITLE}}", escapeHtml(title.replace(/`/g, "")))
+    .replace("{{TITLE}}", () => escapeHtml(info.title))
+    .replace("{{HEAD}}", () => head({
+      path: url,
+      title: info.title,
+      description: info.description,
+      extra: `<link rel="alternate" type="text/markdown" href="${url}.md">`,
+    }))
     .replace("{{NAV}}", nav)
     .replace("{{BODY}}", body)
     .replace("{{PAGER}}", extra.pager ?? "")
@@ -315,6 +513,7 @@ for (const rel of walk("")) {
     mkdirSync(path.dirname(out), { recursive: true });
     // the component pages get previous/next links, in the order the Components page lists them
     writeFileSync(out, renderDoc(rel, docsIn, undefined, { pager: rel.startsWith("components/") ? pagerFor(COMPONENT_PAGES, rel) : undefined }));
+    writeMarkdown(rel, docsIn);
     pages++;
   } else if (rel.endsWith(".png")) {
     mkdirSync(path.join(OUT, "docs", path.dirname(rel)), { recursive: true });
@@ -328,6 +527,7 @@ for (const rel of readdirSync(SITE_DOCS).filter((f) => f.endsWith(".md"))) {
   if (existsSync(out) || existsSync(path.join(OUT, pageUrl(rel).slice(1), "index.html")))
     throw new Error(`${SITE_DOCS}/${rel} and a library docs page are both ${pageUrl(rel)}; rename one`);
   writeFileSync(out, renderDoc(rel, SITE_DOCS, `https://github.com/tsquare-js/tsquare.dev/blob/main/${SITE_DOCS}/${rel}`));
+  writeMarkdown(rel, SITE_DOCS);
   pages++;
 }
 if (existsSync(path.join(OUT, "docs/react"))) throw new Error("the library's docs have a react/ folder, and so does @tsquare-js/react; rename one");
@@ -339,10 +539,78 @@ for (const f of reactFiles) {
     pager: pagerFor(REACT_PAGES, rel),
     edition: `@tsquare-js/react ${REACT_VERSION}`,
   }));
+  writeMarkdown(rel, reactDocs);
   pages++;
 }
 for (const [label, target] of NAV) {
   if (!existsSync(path.join(OUT, pageUrl(target).slice(1) + (target.endsWith("README.md") ? "/index.html" : ".html")))) throw new Error(`docs nav: "${label}" → ${target} has no page`);
+}
+
+// ── Crawlers: robots.txt, sitemap.xml, llms.txt ─────────────────────────
+
+writeFileSync(path.join(OUT, "robots.txt"), `User-agent: *\nDisallow: /api/\nDisallow: /ingest/\n\nSitemap: ${SITE}/sitemap.xml\n`);
+writeFileSync(
+  path.join(OUT, "sitemap.xml"),
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${sitemap.map((p) => `  <url><loc>${SITE}${p}</loc></url>`).join("\n")}\n</urlset>\n`,
+);
+
+/**
+ * llms.txt (llmstxt.org): what tsquare is and where each docs page is, as Markdown, for AI
+ * assistants and agents. llms-full.txt is the language reference models write from (the
+ * library's prompt, without its reply-only instructions) followed by every docs page.
+ */
+{
+  const line = (d: (typeof docsIndex)[number]) => `- [${d.rel === "README.md" ? "Overview" : d.title.replace(/ · .*$/, "")}](${SITE}${pageUrl(d.rel)}.md): ${d.description}`;
+  const order = ["README.md", ...NAV.map(([, t]) => t)];
+  const main = docsIndex.filter((d) => !d.rel.includes("/") || d.rel.endsWith("/README.md"))
+    .sort((a, b) => (order.indexOf(a.rel) + 1 || 99) - (order.indexOf(b.rel) + 1 || 99));
+  const components = COMPONENT_PAGES.slice(1).map(([, t]) => docsIndex.find((d) => d.rel === t)!);
+  const react = REACT_PAGES.slice(1).map(([, t]) => docsIndex.find((d) => d.rel === t)!);
+  const intro = `# tsquare
+
+> ${SUMMARY}
+
+tsquare is a small text language for low-fidelity UI wireframes. A board holds screens (phone, tablet, desktop), sticky notes and flow arrows between screens; tsquare draws it as a grayscale SVG or PNG. It's built for AI models to write: problems come back by line with suggestions, so a model can fix its own output. MIT licensed.
+
+- Write one: read the language reference in ${SITE}/llms-full.txt, then render with \`npx tsquare render board.tsq -o board.png\`, the library (\`npm install tsquare\`), the MCP server at ${SITE}/mcp, or an image URL from ${SITE}/playground.
+- Code fences: \`\`\`tsquare blocks render in VS Code, Obsidian, React apps and Markdown sites (remark-tsquare, markdown-it-tsquare).
+`;
+  writeFileSync(path.join(OUT, "llms.txt"), `${intro}
+## Docs
+
+${main.map(line).join("\n")}
+
+## Components
+
+${components.map(line).join("\n")}
+
+## React
+
+${react.map(line).join("\n")}
+
+## Optional
+
+- [Playground](${SITE}/playground): write a wireframe and see it drawn as you type
+- [Source on GitHub](${REPO}): the library, CLI, playground and evals
+- [npm package](https://www.npmjs.com/package/tsquare)
+- [Privacy](${SITE}/privacy)
+`);
+
+  const prompt = wireframePrompt();
+  const replyOnly = "You write low-fidelity UI wireframes as specs that a renderer turns into images.\nReply with only the spec in a single code block, with no explanation.\n\n";
+  if (!prompt.startsWith(replyOnly)) throw new Error("wireframePrompt() no longer starts with its reply-only lines; update llms-full.txt in src/build.ts");
+  const pagesMd = [...main, ...components, ...react].map((d) => readFileSync(path.join(OUT, pageUrl(d.rel).slice(1) + ".md"), "utf8").trim());
+  writeFileSync(path.join(OUT, "llms-full.txt"), `${intro}
+In code fences, tag tsquare text \`\`\`tsquare. Save files as .tsq.
+
+# Language reference
+
+${prompt.slice(replyOnly.length).trim()}
+
+# Docs
+
+${pagesMd.join("\n\n---\n\n")}
+`);
 }
 
 console.log(`built ${OUT}/: landing (${examples.length} examples), playground, ${pages} docs pages (tsquare ${VERSION}, docs at ${ref.slice(0, 7)}; @tsquare-js/react ${REACT_VERSION})`);
