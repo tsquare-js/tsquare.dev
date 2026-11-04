@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "dev.tsquare/tsquare",
+  "title": "tsquare wireframes",
+  "description": "Draws UI wireframes from a small text language: multi-screen boards with notes and flow arrows.",
+  "version": "0.14.2",
+  "websiteUrl": "https://tsquare.dev",
+  "repository": {
+    "url": "https://github.com/tsquare-js/tsquare",
+    "source": "github"
+  },
+  "icons": [
+    {
+      "src": "https://tsquare.dev/mark.png",
+      "mimeType": "image/png",
+      "sizes": ["256x256"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://tsquare.dev/mcp"
+    }
+  ]
+}

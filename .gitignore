@@ -9,8 +9,10 @@
 !/package-lock.json
 !/tsconfig.json
 !/vercel.json
+!/server.json
 
 !/api/*.ts
+!/scripts/*.sh
 !/src/*.ts
 !/src/*.html
 !/src/*.css
