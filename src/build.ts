@@ -590,7 +590,7 @@ writeFileSync(
 tsquare is a small text language for low-fidelity UI wireframes. A board holds screens (phone, tablet, desktop), sticky notes and flow arrows between screens; tsquare draws it as a grayscale SVG or PNG. It's built for AI models to write: problems come back by line with suggestions, so a model can fix its own output. MIT licensed.
 
 - Write one: read the language reference in ${SITE}/llms-full.txt, then render with \`npx tsquare render board.tsq -o board.png\`, the library (\`npm install tsquare\`), the MCP server at ${SITE}/mcp, or an image URL from ${SITE}/playground.
-- Code fences: \`\`\`tsquare blocks render in VS Code, Obsidian, React apps and Markdown sites (remark-tsquare, markdown-it-tsquare).
+- Code fences: \`\`\`tsquare blocks render in VS Code, Obsidian, React apps and Markdown sites (remark-tsquare, rehype-tsquare, markdown-it-tsquare).
 `;
   writeFileSync(path.join(OUT, "llms.txt"), `${intro}
 ## Docs
