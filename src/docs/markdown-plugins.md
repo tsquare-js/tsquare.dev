@@ -1,6 +1,6 @@
 # Markdown plugins
 
-Two plugins draw ```` ```tsquare ```` code blocks as wireframes when your docs site is built. Write a wireframe in a code block:
+Three plugins draw ```` ```tsquare ```` code blocks as wireframes when your docs site is built. Write a wireframe in a code block:
 
 ````markdown
 ```tsquare
@@ -16,10 +16,10 @@ and the page shows the board as an image. It's drawn on the machine that builds 
 
 | Your site | Plugin |
 |---|---|
-| Docusaurus, Astro, MDX, anything on unified | [`remark-tsquare`](#remark-tsquare) |
+| Docusaurus, Astro, MDX, anything on unified | [`remark-tsquare`](#remark-tsquare) or [`rehype-tsquare`](#rehype-tsquare) |
 | VitePress, Eleventy, anything on markdown-it | [`markdown-it-tsquare`](#markdown-it-tsquare) |
 
-Both make the same HTML and take the same options. They need Node 20 or newer. For a site without a build step, use [the script for any web page](embedding.md#pages-written-in-markdown) instead.
+All three make the same HTML and take the same options. On unified sites, remark-tsquare works on the Markdown and rehype-tsquare on the HTML it becomes: they make the same boards, but remark-tsquare runs before any syntax highlighter, so Astro needs one setting less with it. They need Node 20 or newer. For a site without a build step, use [the script for any web page](embedding.md#pages-written-in-markdown) instead.
 
 ## remark-tsquare
 
@@ -74,6 +74,34 @@ export default defineConfig({
   import "remark-tsquare/client";
 </script>
 ```
+
+## rehype-tsquare
+
+The same plugin for rehype, on the `<pre><code class="language-tsquare">` a code block becomes (or an HTML page has): [`rehype-tsquare` on npm](https://www.npmjs.com/package/rehype-tsquare).
+
+```bash
+npm install rehype-tsquare
+```
+
+**Docusaurus:** add it as `rehypePlugins: [rehypeTsquare]` where the remark-tsquare setup above has `remarkPlugins`. The zoom viewer comes with it.
+
+**Astro:** install `@astrojs/markdown-remark` too, as for remark-tsquare. Astro highlights code before rehype plugins run, and a highlighted block no longer says it was tsquare, so keep the highlighter away from tsquare blocks in `astro.config.mjs`:
+
+```js
+import { defineConfig } from "astro/config";
+import rehypeTsquare from "rehype-tsquare";
+
+export default defineConfig({
+  markdown: {
+    syntaxHighlight: { type: "shiki", excludeLangs: ["tsquare"] },
+    rehypePlugins: [rehypeTsquare],
+  },
+});
+```
+
+Without `excludeLangs`, the build warns that the page's tsquare blocks became plain code and says what to add. For the zoom viewer, load `rehype-tsquare/client` from your layout, as with remark-tsquare.
+
+**Starlight:** add `markdown: { rehypePlugins: [rehypeTsquare] }` to `astro.config.mjs`, with `@astrojs/markdown-remark` installed. Starlight's code blocks leave tsquare blocks alone, so there's no highlighter setting. For the zoom viewer, copy `node_modules/rehype-tsquare/dist/client.standalone.js` into `public/` and add `head: [{ tag: "script", attrs: { type: "module", src: "/client.standalone.js" } }]` to the Starlight options.
 
 ## markdown-it-tsquare
 
@@ -149,10 +177,10 @@ Pass options with the plugin, for example `[remarkTsquare, { link: true }]` or `
 | `zoom` | `"auto"` | Which boards readers can open: `"auto"` for boards wider than 800px (the ones a docs column shrinks), `true` for all, `false` for none. |
 | `link` | `false` | An "Open in playground" link under each board. `true` opens [the playground](/playground) on tsquare.dev, or give the address of a playground you host. |
 | `flows` | `true` | Draw the flow arrows between screens. |
-| `strict` | `false` | Fail the build when a wireframe has problems, instead of listing them on the page. Good for CI. |
+| `strict` | `false` | Fail the build when a wireframe has problems (or, for rehype-tsquare, when a highlighter got to the blocks first), instead of listing them on the page. Good for CI. |
 
 ## Privacy
 
 Boards are drawn when the site is built, and the zoom script works with the image already on the page: neither sends anything anywhere. With `link`, the "Open in playground" link holds the wireframe's text after the `#`, so following it doesn't send the text anywhere by itself; the playground then sends it to tsquare.dev to draw it, as it does for anything typed there. See the [privacy page](/privacy).
 
-The plugins' full documentation (the HTML they make, sizes, MDX and markdown-it details) is in their READMEs: [remark-tsquare](https://github.com/tsquare-js/markdown/tree/main/packages/remark-tsquare#readme) and [markdown-it-tsquare](https://github.com/tsquare-js/markdown/tree/main/packages/markdown-it-tsquare#readme). The code and issues are at [tsquare-js/markdown](https://github.com/tsquare-js/markdown).
+The plugins' full documentation (the HTML they make, sizes, MDX, HTML-page and markdown-it details) is in their READMEs: [remark-tsquare](https://github.com/tsquare-js/markdown/tree/main/packages/remark-tsquare#readme), [rehype-tsquare](https://github.com/tsquare-js/markdown/tree/main/packages/rehype-tsquare#readme) and [markdown-it-tsquare](https://github.com/tsquare-js/markdown/tree/main/packages/markdown-it-tsquare#readme). The code and issues are at [tsquare-js/markdown](https://github.com/tsquare-js/markdown).
