@@ -223,6 +223,28 @@ writeFileSync(
     .replaceAll("{{VERSION}}", VERSION),
 );
 
+// ── Terms page ──────────────────────────────────────────────────────────
+
+writeFileSync(
+  path.join(OUT, "terms.html"),
+  readFileSync("src/terms.html", "utf8")
+    .replace("{{HEAD}}", () => head({
+      path: "/terms",
+      title: "Terms · tsquare",
+      description: "The terms for using tsquare.dev, its playground, image links and MCP server: free, fair use, no warranty.",
+    }))
+    .replaceAll("{{VERSION}}", VERSION),
+);
+
+// ── Domain verification: OpenAI's plugin directory ───────────────────────
+// The directory checks that we control tsquare.dev by fetching a token it issues as plain text from
+// /.well-known/openai-apps-challenge (vercel.json sets the type). The token is public by design.
+
+if (existsSync("src/openai-apps-challenge.txt")) {
+  mkdirSync(path.join(OUT, ".well-known"), { recursive: true });
+  writeFileSync(path.join(OUT, ".well-known", "openai-apps-challenge"), readFileSync("src/openai-apps-challenge.txt", "utf8").trim());
+}
+
 // ── Console easter egg: the picture of src/console.tsq, then its source ─
 
 {
@@ -611,6 +633,7 @@ ${react.map(line).join("\n")}
 - [Source on GitHub](${REPO}): the library, CLI, playground and evals
 - [npm package](https://www.npmjs.com/package/tsquare)
 - [Privacy](${SITE}/privacy)
+- [Terms](${SITE}/terms)
 `);
 
   const prompt = wireframePrompt();

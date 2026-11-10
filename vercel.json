@@ -35,5 +35,16 @@
       "maxDuration": 30,
       "includeFiles": "node_modules/{tsquare,@fontsource/inter/files}/**"
     }
-  }
+  },
+  "headers": [
+    {
+      "source": "/.well-known/openai-apps-challenge",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        }
+      ]
+    }
+  ]
 }
