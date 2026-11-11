@@ -3,7 +3,7 @@
   "name": "dev.tsquare/tsquare",
   "title": "tsquare wireframes",
   "description": "Draws UI wireframes from a small text language: multi-screen boards with notes and flow arrows.",
-  "version": "0.14.4",
+  "version": "0.14.5",
   "websiteUrl": "https://tsquare.dev",
   "repository": {
     "url": "https://github.com/tsquare-js/tsquare",
